@@ -37,19 +37,28 @@ namespace ZombieLand.UI
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), 30, TextAnchor.MiddleCenter);
             messageText.color = new Color(1f, 0.95f, 0.7f);
 
+            // Soul Integrity (health) bar — shown first because it's
+            // the most important at-a-glance status.
+            Image soulFill = MakeBar(hudPanel.transform, "Soul",
+                new Vector2(40, -90), new Color(1f, 0.4f, 0.45f));
+            MakeText(hudPanel.transform, "SoulLabel",
+                "Soul Integrity", new Vector2(40, -120),
+                new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
+                = new Color(1, 1, 1, 0.6f);
+
             // Battery bar (flashlight).
             Image batteryFill = MakeBar(hudPanel.transform, "Battery",
-                new Vector2(40, -90), new Color(1f, 0.85f, 0.5f));
+                new Vector2(40, -160), new Color(1f, 0.85f, 0.5f));
             MakeText(hudPanel.transform, "BatteryLabel",
-                "Flashlight (F)", new Vector2(40, -120),
+                "Flashlight (F)", new Vector2(40, -190),
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
                 = new Color(1, 1, 1, 0.6f);
 
             // Stamina bar (sprint).
             Image staminaFill = MakeBar(hudPanel.transform, "Stamina",
-                new Vector2(40, -160), new Color(0.6f, 0.85f, 1f));
+                new Vector2(40, -230), new Color(0.6f, 0.85f, 1f));
             MakeText(hudPanel.transform, "StaminaLabel",
-                "Sprint (Shift)", new Vector2(40, -190),
+                "Sprint (Shift)", new Vector2(40, -260),
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
                 = new Color(1, 1, 1, 0.6f);
 
@@ -64,6 +73,7 @@ namespace ZombieLand.UI
             hud.messageText = messageText;
             hud.batteryFill = batteryFill;
             hud.staminaFill = staminaFill;
+            hud.soulFill = soulFill;
             if (player != null)
                 hud.Bind(
                     player.GetComponent<PlayerStats>(),

@@ -33,9 +33,16 @@ The project is a regular Unity project. To open and play it:
 | Pause / unpause   | **Esc** |
 | Confirm menu choice | **Mouse click** |
 
-The HUD shows two bars in the top-left: an **amber Flashlight Battery**
-bar and a **blue Sprint Stamina** bar. Sprinting drains stamina; the
-bar regenerates as soon as you release Shift or stop moving.
+The HUD shows three bars in the top-left:
+
+1. **Pink Soul Integrity** bar — drops when a zombie disturbs you and
+   slowly regenerates after a short delay. By design it is clamped
+   above zero, so you cannot die — it gives visual feedback for
+   contact without breaking the project's no-death theme.
+2. **Amber Flashlight Battery** bar — drains while the flashlight is on.
+3. **Blue Sprint Stamina** bar — drains while sprinting (turns lighter
+   green-white at the moment you're actually sprinting), regenerates
+   while not.
 
 ## Goal
 

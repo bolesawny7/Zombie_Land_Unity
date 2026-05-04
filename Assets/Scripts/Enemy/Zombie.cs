@@ -46,8 +46,12 @@ namespace ZombieLand.Enemy
 
         public float gravity = -20f;
 
+        [Header("Damage")]
+        public float disturbSoulDamage = 12f;
+
         Transform player;
         PlayerFlashlight playerFlashlight;
+        PlayerStats playerStats;
         CharacterController cc;
 
         List<Vector3> currentPath = new List<Vector3>();
@@ -101,6 +105,7 @@ namespace ZombieLand.Enemy
             {
                 player = p.transform;
                 playerFlashlight = p.GetComponent<PlayerFlashlight>();
+                playerStats = p.GetComponent<PlayerStats>();
             }
             // Stagger initial repath so all zombies don't search on the same frame.
             nextRepathTime = Time.time + Random.Range(0f, repathInterval);
@@ -244,6 +249,25 @@ namespace ZombieLand.Enemy
                     SmoothFollowCamera.Instance.Shake(0.25f, 0.25f);
                 if (HUDController.Instance != null)
                     HUDController.Instance.ShowMessage("...a memory flickers...", 1.2f);
+                if (playerStats != null)
+                    playerStats.DisturbSoul(disturbSoulDamage);
+            }
+        }
+
+        // Visualises the zombie's current path in the Scene view so we can
+        // verify A* is actually steering toward the player. Red = chase,
+        // yellow = wander.
+        void OnDrawGizmos()
+        {
+            if (currentPath == null || currentPath.Count == 0) return;
+            Gizmos.color = state == State.Chase ? Color.red : Color.yellow;
+            Vector3 prev = transform.position + Vector3.up * 0.5f;
+            for (int i = pathIndex; i < currentPath.Count; i++)
+            {
+                Vector3 wp = currentPath[i] + Vector3.up * 0.5f;
+                Gizmos.DrawLine(prev, wp);
+                Gizmos.DrawWireSphere(wp, 0.15f);
+                prev = wp;
             }
         }
     }
