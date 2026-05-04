@@ -7,33 +7,51 @@ using ZombieLand.Utility;
 
 namespace ZombieLand.Enemy
 {
+    public enum ZombieType { Walker, Runner, Brute }
+
     /// <summary>
-    /// A simple finite-state-machine zombie:
-    ///   Wander: pick a random reachable cell and shamble toward it.
-    ///   Chase:  recompute an A* path to the player every `repathInterval`s.
-    /// State transitions are based on distance to the player; the flashlight
-    /// extends the zombie's "sight" because the player's light gives them away.
+    /// Path-following zombie with three variants and three behavioural states.
     ///
-    /// On contact with the player, the zombie does NOT damage the player.
-    /// Instead it triggers a small "memory disturbance" effect: a brief camera
-    /// shake and an on-screen message. This is the project's twist on
-    /// traditional zombie-game collision feedback.
+    /// Movement is now driven by a <see cref="CharacterController"/> so the
+    /// zombie collides with walls (and the player) properly instead of
+    /// teleporting through them — this fixes the previous bug where a
+    /// chasing zombie could slide right through geometry.
+    ///
+    /// On contact with the player the zombie still does NO damage; it
+    /// triggers a "memory disturbance" effect (camera shake + HUD flicker).
+    /// Player gunfire calls <see cref="Stun"/>, which freezes the zombie in
+    /// place for a few seconds and tints it briefly.
     /// </summary>
+    [RequireComponent(typeof(CharacterController))]
     public class Zombie : MonoBehaviour
     {
-        public float wanderSpeed = 1.4f;
-        public float chaseSpeed = 2.8f;
-        public float sightRange = 9f;
-        public float loseSightRange = 14f;
+        public ZombieType type = ZombieType.Walker;
+
+        // Stats are filled in by ApplyTypeStats so the inspector defaults
+        // never disagree with the variant we asked for.
+        public float wanderSpeed;
+        public float chaseSpeed;
+        public float sightRange;
+        public float loseSightRange;
+
         public float repathInterval = 0.4f;
         public float wanderRadius = 7f;
         public float waypointReachedDist = 0.45f;
+
+        public float disturbDistance = 1.4f;
         public float disturbCooldown = 1.5f;
+
+        public float gravity = -20f;
+
+        // Renderers tinted while stunned.
+        public Renderer[] bodyRenderers;
+        public Light[] eyeLights;
 
         Transform player;
         PlayerFlashlight playerFlashlight;
-        Animator animator;
+        CharacterController cc;
 
+        readonly List<Vector3> emptyPath = new List<Vector3>();
         List<Vector3> currentPath;
         int pathIndex;
         float nextRepathTime;
@@ -42,19 +60,56 @@ namespace ZombieLand.Enemy
         float nextWanderPickTime;
 
         float lastDisturbTime = -10f;
+        float stunUntilTime;
+        Color[] originalColors;
+        float[] originalEyeIntensity;
+
+        Vector3 verticalVel;
 
         enum State { Wander, Chase }
         State state = State.Wander;
 
+        void Awake()
+        {
+            cc = GetComponent<CharacterController>();
+            ApplyTypeStats();
+        }
+
+        public void ApplyTypeStats()
+        {
+            switch (type)
+            {
+                case ZombieType.Walker:
+                    wanderSpeed = 1.4f;
+                    chaseSpeed = 2.6f;
+                    sightRange = 9f;
+                    loseSightRange = 14f;
+                    break;
+                case ZombieType.Runner:
+                    wanderSpeed = 2.2f;
+                    chaseSpeed = 5.2f;
+                    sightRange = 12f;
+                    loseSightRange = 18f;
+                    break;
+                case ZombieType.Brute:
+                    wanderSpeed = 1.0f;
+                    chaseSpeed = 1.9f;
+                    sightRange = 7f;
+                    loseSightRange = 11f;
+                    break;
+            }
+        }
+
         void Start()
         {
-            var p = GameObject.FindGameObjectWithTag("Player");
-            if (p)
+            CacheVisualOriginals();
+
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null)
             {
                 player = p.transform;
                 playerFlashlight = p.GetComponent<PlayerFlashlight>();
             }
-            animator = GetComponentInChildren<Animator>();
             PickNewWanderTarget();
         }
 
@@ -62,25 +117,41 @@ namespace ZombieLand.Enemy
         {
             if (player == null) return;
 
+            // Stunned: stand still but still apply gravity so the CC doesn't
+            // float if the floor under us shifts.
+            if (Time.time < stunUntilTime)
+            {
+                ApplyGravityOnly();
+                return;
+            }
+
+            // Just exited stun this frame — restore visuals.
+            if (originalColors != null && IsTinted())
+                RestoreTint();
+
             UpdateState();
             UpdatePath();
             FollowPath();
-            UpdateAnimator();
+            CheckMemoryDisturbance();
         }
+
+        // ----- State machine -----
 
         void UpdateState()
         {
             float distance = Vector3.Distance(transform.position, player.position);
 
-            // The flashlight makes you easier to spot.
             float effectiveSight = sightRange;
-            if (playerFlashlight != null && playerFlashlight.On) effectiveSight *= 1.5f;
+            if (playerFlashlight != null && playerFlashlight.On)
+                effectiveSight *= 1.5f; // your flashlight gives you away
 
             if (state == State.Wander && distance <= effectiveSight)
                 state = State.Chase;
             else if (state == State.Chase && distance > loseSightRange)
                 state = State.Wander;
         }
+
+        // ----- Pathfinding -----
 
         void UpdatePath()
         {
@@ -95,46 +166,74 @@ namespace ZombieLand.Enemy
             else
             {
                 if (Time.time >= nextWanderPickTime ||
-                    Vector3.Distance(transform.position, wanderTarget) < 1f)
+                    Vector3.Distance(transform.position, wanderTarget) < 1.5f)
                     PickNewWanderTarget();
                 target = wanderTarget;
             }
 
-            currentPath = AStarPathfinder.FindPath(transform.position, target);
+            currentPath = AStarPathfinder.FindPath(transform.position, target) ?? emptyPath;
             pathIndex = 0;
         }
 
+        // ----- Movement -----
+
         void FollowPath()
         {
-            if (currentPath == null || pathIndex >= currentPath.Count) return;
+            Vector3 horizontal = Vector3.zero;
 
-            Vector3 waypoint = currentPath[pathIndex];
-            waypoint.y = transform.position.y;
-
-            Vector3 dir = waypoint - transform.position;
-            dir.y = 0f;
-            float dist = dir.magnitude;
-            if (dist < waypointReachedDist)
+            if (currentPath != null && pathIndex < currentPath.Count)
             {
-                pathIndex++;
-                return;
+                Vector3 waypoint = currentPath[pathIndex];
+
+                Vector3 toWaypoint = new Vector3(
+                    waypoint.x - transform.position.x,
+                    0f,
+                    waypoint.z - transform.position.z);
+                float dist = toWaypoint.magnitude;
+
+                if (dist < waypointReachedDist)
+                {
+                    pathIndex++;
+                }
+                else
+                {
+                    Vector3 dir = toWaypoint / dist;
+                    float speed = state == State.Chase ? chaseSpeed : wanderSpeed;
+                    horizontal = dir * speed;
+
+                    Quaternion lookRot = Quaternion.LookRotation(dir);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, 8f * Time.deltaTime);
+                }
             }
 
-            dir /= dist;
-            float speed = state == State.Chase ? chaseSpeed : wanderSpeed;
-            transform.position += dir * speed * Time.deltaTime;
+            // Gravity keeps the CC sitting on the floor regardless of path.
+            if (cc.isGrounded && verticalVel.y < 0f) verticalVel.y = -1f;
+            verticalVel.y += gravity * Time.deltaTime;
 
-            Quaternion lookRot = Quaternion.LookRotation(dir);
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRot, 8f * Time.deltaTime);
+            cc.Move((horizontal + verticalVel) * Time.deltaTime);
         }
 
-        void UpdateAnimator()
+        void ApplyGravityOnly()
         {
-            if (animator == null) return;
-            float speed = state == State.Chase ? chaseSpeed : wanderSpeed;
-            bool moving = currentPath != null && pathIndex < currentPath.Count;
-            animator.SetFloat("Speed", moving ? speed : 0f);
-            animator.SetBool("Chasing", state == State.Chase);
+            if (cc.isGrounded && verticalVel.y < 0f) verticalVel.y = -1f;
+            verticalVel.y += gravity * Time.deltaTime;
+            cc.Move(verticalVel * Time.deltaTime);
+        }
+
+        // ----- Memory disturbance (replaces traditional damage) -----
+
+        void CheckMemoryDisturbance()
+        {
+            if (Time.time - lastDisturbTime < disturbCooldown) return;
+            float dist = Vector3.Distance(transform.position, player.position);
+            if (dist < disturbDistance)
+            {
+                lastDisturbTime = Time.time;
+                if (SmoothFollowCamera.Instance != null)
+                    SmoothFollowCamera.Instance.Shake(0.25f, 0.25f);
+                if (HUDController.Instance != null)
+                    HUDController.Instance.ShowMessage("...a memory flickers...", 1.2f);
+            }
         }
 
         void PickNewWanderTarget()
@@ -144,29 +243,73 @@ namespace ZombieLand.Enemy
             nextWanderPickTime = Time.time + Random.Range(3f, 6f);
         }
 
-        // Triggered when the player's CharacterController enters this zombie's
-        // trigger collider. We deliberately do NOT damage the player; instead
-        // we emit cosmetic feedback that fits the "memory" theme.
-        void OnTriggerEnter(Collider other)
+        // ----- Stun (called by PlayerGun) -----
+
+        public void Stun(float duration)
         {
-            if (!other.CompareTag("Player")) return;
-            DisturbMemory();
+            stunUntilTime = Mathf.Max(stunUntilTime, Time.time + duration);
+            currentPath = null;
+            pathIndex = 0;
+            ApplyTint(new Color(0.6f, 0.85f, 1f), 1.5f);
         }
 
-        void OnTriggerStay(Collider other)
+        public bool IsStunned => Time.time < stunUntilTime;
+
+        // ----- Visual tint helpers -----
+
+        void CacheVisualOriginals()
         {
-            if (!other.CompareTag("Player")) return;
-            if (Time.time - lastDisturbTime < disturbCooldown) return;
-            DisturbMemory();
+            if (bodyRenderers == null) return;
+            originalColors = new Color[bodyRenderers.Length];
+            for (int i = 0; i < bodyRenderers.Length; i++)
+            {
+                if (bodyRenderers[i] != null)
+                    originalColors[i] = bodyRenderers[i].material.GetColor("_EmissionColor");
+            }
+            if (eyeLights != null)
+            {
+                originalEyeIntensity = new float[eyeLights.Length];
+                for (int i = 0; i < eyeLights.Length; i++)
+                    if (eyeLights[i] != null) originalEyeIntensity[i] = eyeLights[i].intensity;
+            }
         }
 
-        void DisturbMemory()
+        void ApplyTint(Color emissive, float multiplier)
         {
-            lastDisturbTime = Time.time;
-            if (SmoothFollowCamera.Instance != null)
-                SmoothFollowCamera.Instance.Shake(0.25f, 0.25f);
-            if (HUDController.Instance != null)
-                HUDController.Instance.ShowMessage("...a memory flickers...", 1.2f);
+            if (bodyRenderers == null) return;
+            for (int i = 0; i < bodyRenderers.Length; i++)
+            {
+                if (bodyRenderers[i] == null) continue;
+                bodyRenderers[i].material.EnableKeyword("_EMISSION");
+                bodyRenderers[i].material.SetColor("_EmissionColor", emissive * multiplier);
+            }
+            if (eyeLights != null)
+            {
+                for (int i = 0; i < eyeLights.Length; i++)
+                    if (eyeLights[i] != null) eyeLights[i].intensity = 0.1f;
+            }
+        }
+
+        bool IsTinted()
+        {
+            if (bodyRenderers == null || bodyRenderers.Length == 0 || originalColors == null) return false;
+            return bodyRenderers[0] != null &&
+                   bodyRenderers[0].material.GetColor("_EmissionColor") != originalColors[0];
+        }
+
+        void RestoreTint()
+        {
+            if (bodyRenderers == null) return;
+            for (int i = 0; i < bodyRenderers.Length; i++)
+            {
+                if (bodyRenderers[i] == null) continue;
+                bodyRenderers[i].material.SetColor("_EmissionColor", originalColors[i]);
+            }
+            if (eyeLights != null && originalEyeIntensity != null)
+            {
+                for (int i = 0; i < eyeLights.Length; i++)
+                    if (eyeLights[i] != null) eyeLights[i].intensity = originalEyeIntensity[i];
+            }
         }
     }
 }

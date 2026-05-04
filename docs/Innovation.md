@@ -49,10 +49,17 @@ inverts that template.
 1. **Memory disturbance feedback** — the camera-shake-on-contact
    replaces traditional damage with a thematic, harmless tell.
 2. **Flashlight visibility trade-off** — light helps you and hurts you.
-3. **Inline narrative through pickups** — each fragment carries a
+3. **Light-Burst gun (non-lethal)** — the player gets a real combat
+   verb (stun) without breaking the no-death rule. The beam pins a
+   zombie in place and visibly tints it; the zombie is not destroyed
+   because in this fiction you cannot destroy a memory, only quiet it.
+4. **Three zombie variants from one script** — Walker, Runner, and
+   Brute share `Zombie.cs`; the variant just tweaks speed, sight,
+   colour, and silhouette parameters. Cheap to author, easy to extend.
+5. **Inline narrative through pickups** — each fragment carries a
    single line of poetic text shown both as a transient HUD message
    and assembled into the win-screen "Remembered" log.
-4. **Procedural-from-code world** — the whole project is a single
+6. **Procedural-from-code world** — the whole project is a single
    pressable button in any clean scene; nothing is hand-baked.
 
 ## What I'd do next

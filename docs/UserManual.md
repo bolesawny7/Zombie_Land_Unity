@@ -29,6 +29,7 @@ The project is a regular Unity project. To open and play it:
 |------------|----------------|
 | Move       | **WASD** / Arrow keys |
 | Toggle flashlight | **F**   |
+| Fire Light-Burst gun | **Left Mouse Button** |
 | Pause / unpause   | **Esc** |
 | Confirm menu choice | **Mouse click** |
 
@@ -45,14 +46,34 @@ The project is a regular Unity project. To open and play it:
 
 ## Zombies
 
-- Zombies wander the maze at random. If you get close, they switch
-  into chase mode and pathfind toward you using **A***.
+The maze has three flavours of zombie. Each one wanders randomly
+until it spots you, then switches into chase mode and pathfinds
+toward you using **A\***. They are physically solid — they can no
+longer phase through walls.
+
+| Variant | Look | Speed | Notes |
+|---------|------|-------|-------|
+| **Walker** | Tall green-grey shambler | Slow | The default cannon-fodder zombie. |
+| **Runner** | Lean red-tinted figure with bright crimson eyes | **Fast** | Sees further; will close gaps quickly. |
+| **Brute**  | Big, dark, broad with amber eyes | Slow | Tankier silhouette; harder to dodge in narrow spaces. |
+
 - Carrying your flashlight on increases the distance at which they
   notice you (your light gives you away).
 - **They cannot hurt you.** When a zombie brushes through you, the
   camera shudders and the message *"...a memory flickers..."* appears.
-  This is the only consequence of contact — the project is a
-  meditative exploration game, not a survival game.
+  This is the only consequence of contact.
+
+## The Light-Burst Gun
+
+You carry a small "light-burst" gun fired with **Left Mouse Button**.
+
+- It does not kill — instead it **stuns** any zombie it hits for
+  ~3 seconds. Stunned zombies stop in place and tint blue.
+- A crosshair in the centre of the screen shows where you are aiming.
+- The beam is a hitscan raycast — there is no travel time, no
+  ammunition limit, only a short cooldown between shots.
+- Use it to peel runners off your back when you need a clean run to
+  the next memory fragment.
 
 ## Tips
 

@@ -6,10 +6,12 @@ namespace ZombieLand.Environment
     /// Legend:
     ///   '#' wall
     ///   '.' floor
-    ///   'P' player spawn  (one)
-    ///   'E' exit portal   (one)
+    ///   'P' player spawn (one)
+    ///   'E' exit portal  (one)
     ///   'F' memory fragment spawn
-    ///   'Z' zombie spawn
+    ///   'Z' walker zombie spawn (slow shambler)
+    ///   'R' runner zombie spawn (fast, lean, glowing red eyes)
+    ///   'B' brute zombie spawn  (large, slow, heavy)
     /// All walls are isolated 2x2 pillars surrounded by floor, so the
     /// arena is always one fully connected walkable region.
     /// </summary>
@@ -20,20 +22,20 @@ namespace ZombieLand.Environment
             "#################",
             "#P..............#",
             "#...##.....##...#",
-            "#...##.....##...#",
+            "#...##..R..##...#",
             "#.......F.......#",
             "#...............#",
             "#...##.....##...#",
             "#.F.##..Z..##...#",
             "#...##.....##...#",
-            "#......Z........#",
+            "#......R........#",
             "#...##.....##...#",
             "#...##..F..##...#",
             "#...##.....##...#",
-            "#.....Z.....F...#",
+            "#.....B.....F...#",
             "#...............#",
             "#...##.....##...#",
-            "#.F.##.....##...#",
+            "#.F.##..Z..##...#",
             "#......E........#",
             "#################",
         };

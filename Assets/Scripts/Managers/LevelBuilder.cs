@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using ZombieLand.Enemy;
 using ZombieLand.Environment;
 using ZombieLand.Items;
@@ -12,15 +11,10 @@ using ZombieLand.Utility;
 namespace ZombieLand.Managers
 {
     /// <summary>
-    /// Builds the entire game world (floor, walls, lights, player, zombies,
-    /// memory fragments, exit, pathfinding grid, camera, and UI) at runtime
-    /// from <see cref="MazeData"/>. Drop one empty GameObject with this script
-    /// into a fresh scene and press Play -- nothing else is required.
-    ///
-    /// Why procedural? It keeps the entire game in source-controlled .cs
-    /// files (no fragile .unity scene files), makes the project easy to
-    /// re-grade on a fresh machine, and gives us a single readable place
-    /// to see how everything is wired together.
+    /// Builds the entire game world (floor, walls, lights, player + gun,
+    /// zombies of three variants, memory fragments, exit, pathfinding grid,
+    /// camera, and UI) at runtime from <see cref="MazeData"/>. Drop one
+    /// empty GameObject with this script into a fresh scene and press Play.
     /// </summary>
     public class LevelBuilder : MonoBehaviour
     {
@@ -29,7 +23,7 @@ namespace ZombieLand.Managers
         public float wallHeight = 3f;
 
         [Header("Layers")]
-        public string obstacleLayerName = "Default"; // walls block pathfinding sight checks
+        public string obstacleLayerName = "Default";
 
         [Header("Memory texts (in spawn order)")]
         [TextArea] public string[] memories = new[]
@@ -41,11 +35,11 @@ namespace ZombieLand.Managers
             "Her voice, calling me home through the fog.",
         };
 
-        // References built up while constructing the world.
         Transform worldRoot;
         Transform player;
+
         readonly List<Vector3> fragmentSpawns = new List<Vector3>();
-        readonly List<Vector3> zombieSpawns = new List<Vector3>();
+        readonly List<(Vector3 pos, ZombieType type)> zombieSpawns = new List<(Vector3, ZombieType)>();
         Vector3 playerSpawn;
         Vector3 exitSpawn;
         bool hasExit;
@@ -53,10 +47,7 @@ namespace ZombieLand.Managers
         int gridCols;
         int gridRows;
 
-        void Awake()
-        {
-            BuildAll();
-        }
+        void Awake() => BuildAll();
 
         void BuildAll()
         {
@@ -98,7 +89,6 @@ namespace ZombieLand.Managers
             l.intensity = 0.35f;
             l.shadows = LightShadows.Soft;
 
-            // A subtle warm fill light to keep the scene readable.
             GameObject fill = new GameObject("FillLight");
             fill.transform.SetParent(worldRoot);
             fill.transform.rotation = Quaternion.Euler(-30f, -120f, 0f);
@@ -127,10 +117,10 @@ namespace ZombieLand.Managers
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Plane);
             floor.name = "Floor";
             floor.transform.SetParent(worldRoot);
-            // Plane is 10x10, so divide world size by 10 for scale.
             floor.transform.localScale = new Vector3(worldWidth / 10f, 1f, worldDepth / 10f);
             floor.transform.position = Vector3.zero;
-            ApplyMaterial(floor.GetComponent<Renderer>(), new Color(0.08f, 0.09f, 0.12f), 0.05f, 0.85f);
+            ApplyMaterial(floor.GetComponent<Renderer>(),
+                new Color(0.08f, 0.09f, 0.12f), 0.05f, 0.85f);
         }
 
         void ParseLayoutAndBuild(string[] layout)
@@ -149,14 +139,15 @@ namespace ZombieLand.Managers
                         case 'P': playerSpawn = pos; break;
                         case 'E': exitSpawn = pos; hasExit = true; break;
                         case 'F': fragmentSpawns.Add(pos); break;
-                        case 'Z': zombieSpawns.Add(pos); break;
+                        case 'Z': zombieSpawns.Add((pos, ZombieType.Walker)); break;
+                        case 'R': zombieSpawns.Add((pos, ZombieType.Runner)); break;
+                        case 'B': zombieSpawns.Add((pos, ZombieType.Brute));  break;
                     }
                 }
             }
         }
 
-        // ASCII row 0 is at the top of the layout, which we map to the largest
-        // Z value so the world reads "north = top of screen".
+        // ASCII row 0 maps to the LARGEST Z (top of layout = "north").
         Vector3 GridToWorld(int col, int row)
         {
             float worldWidth = gridCols * cellSize;
@@ -173,7 +164,8 @@ namespace ZombieLand.Managers
             wall.transform.SetParent(worldRoot);
             wall.transform.position = pos + Vector3.up * (wallHeight * 0.5f);
             wall.transform.localScale = new Vector3(cellSize, wallHeight, cellSize);
-            ApplyMaterial(wall.GetComponent<Renderer>(), new Color(0.18f, 0.2f, 0.22f), 0.1f, 0.6f);
+            ApplyMaterial(wall.GetComponent<Renderer>(),
+                new Color(0.18f, 0.2f, 0.22f), 0.1f, 0.6f);
         }
 
         // -------- Pathfinding --------
@@ -182,8 +174,7 @@ namespace ZombieLand.Managers
         {
             GameObject gridGO = new GameObject("PathfindingGrid");
             gridGO.transform.SetParent(worldRoot);
-            // Sample the grid at y = 1 so we hit wall colliders (which span y = 0..3)
-            // but NOT the floor plane sitting at y = 0.
+            // Sample at y = 1: above the floor plane, inside wall colliders.
             gridGO.transform.position = new Vector3(0f, 1f, 0f);
             var pf = gridGO.AddComponent<PathfindingGrid>();
             pf.gridWorldSize = new Vector2(gridCols * cellSize, gridRows * cellSize);
@@ -191,32 +182,64 @@ namespace ZombieLand.Managers
             pf.obstacleMask = LayerMask.GetMask(obstacleLayerName);
         }
 
-        // -------- Spawns --------
+        // -------- Player --------
 
         void SpawnPlayer()
         {
             GameObject p = new GameObject("Player");
             p.tag = "Player";
             p.transform.SetParent(worldRoot);
-            p.transform.position = playerSpawn + Vector3.up * 1f;
+            p.transform.position = playerSpawn;
 
-            var cc = p.AddComponent<CharacterController>();
+            CharacterController cc = p.AddComponent<CharacterController>();
             cc.height = 1.8f;
             cc.radius = 0.4f;
             cc.center = new Vector3(0f, 0.9f, 0f);
 
-            // Visual: capsule body + smaller head sphere for a "soul" silhouette.
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            Object.Destroy(body.GetComponent<Collider>());
-            body.transform.SetParent(p.transform, false);
-            body.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
-            body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            ApplyMaterial(body.GetComponent<Renderer>(), new Color(0.65f, 0.8f, 1f), 0.2f, 0.4f, emission: new Color(0.15f, 0.2f, 0.4f));
+            // Cloak / mantle (lower)
+            GameObject cloak = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.Destroy(cloak.GetComponent<Collider>());
+            cloak.transform.SetParent(p.transform, false);
+            cloak.transform.localPosition = new Vector3(0f, 0.65f, 0f);
+            cloak.transform.localScale = new Vector3(0.85f, 0.65f, 0.85f);
+            ApplyMaterial(cloak.GetComponent<Renderer>(),
+                new Color(0.15f, 0.25f, 0.4f), 0.0f, 0.2f,
+                emission: new Color(0.05f, 0.08f, 0.18f));
 
-            // Flashlight as a child spotlight.
+            // Slim torso (upper)
+            GameObject torso = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.Destroy(torso.GetComponent<Collider>());
+            torso.transform.SetParent(p.transform, false);
+            torso.transform.localPosition = new Vector3(0f, 1.4f, 0f);
+            torso.transform.localScale = new Vector3(0.55f, 0.4f, 0.55f);
+            ApplyMaterial(torso.GetComponent<Renderer>(),
+                new Color(0.55f, 0.7f, 1f), 0f, 0.3f,
+                emission: new Color(0.15f, 0.25f, 0.45f));
+
+            // Glowing head
+            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.Destroy(head.GetComponent<Collider>());
+            head.transform.SetParent(p.transform, false);
+            head.transform.localPosition = new Vector3(0f, 2.0f, 0f);
+            head.transform.localScale = Vector3.one * 0.35f;
+            ApplyMaterial(head.GetComponent<Renderer>(),
+                new Color(0.85f, 0.95f, 1f), 0f, 0.2f,
+                emission: new Color(0.45f, 0.65f, 1.2f));
+
+            // Personal halo so the player is never completely invisible.
+            GameObject halo = new GameObject("Halo");
+            halo.transform.SetParent(p.transform, false);
+            halo.transform.localPosition = new Vector3(0f, 1.4f, 0f);
+            Light haloLight = halo.AddComponent<Light>();
+            haloLight.type = LightType.Point;
+            haloLight.range = 4f;
+            haloLight.intensity = 0.9f;
+            haloLight.color = new Color(0.5f, 0.7f, 1f);
+
+            // Flashlight spotlight.
             GameObject lightGO = new GameObject("Flashlight");
             lightGO.transform.SetParent(p.transform, false);
-            lightGO.transform.localPosition = new Vector3(0f, 1.5f, 0.3f);
+            lightGO.transform.localPosition = new Vector3(0.0f, 1.7f, 0.3f);
             lightGO.transform.localRotation = Quaternion.Euler(15f, 0f, 0f);
             Light spot = lightGO.AddComponent<Light>();
             spot.type = LightType.Spot;
@@ -226,23 +249,65 @@ namespace ZombieLand.Managers
             spot.color = new Color(1f, 0.92f, 0.75f);
             spot.shadows = LightShadows.Soft;
 
-            // A faint personal point light so the player is never invisible.
-            GameObject halo = new GameObject("Halo");
-            halo.transform.SetParent(p.transform, false);
-            halo.transform.localPosition = new Vector3(0f, 1f, 0f);
-            Light haloLight = halo.AddComponent<Light>();
-            haloLight.type = LightType.Point;
-            haloLight.range = 3f;
-            haloLight.intensity = 0.7f;
-            haloLight.color = new Color(0.5f, 0.7f, 1f);
+            // ----- Gun -----
 
-            p.AddComponent<PlayerController>();
-            var fl = p.AddComponent<PlayerFlashlight>();
+            GameObject gun = new GameObject("Gun");
+            gun.transform.SetParent(p.transform, false);
+            gun.transform.localPosition = new Vector3(0.4f, 1.2f, 0.45f);
+
+            GameObject gunBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.Destroy(gunBody.GetComponent<Collider>());
+            gunBody.transform.SetParent(gun.transform, false);
+            gunBody.transform.localPosition = new Vector3(0f, 0f, 0f);
+            gunBody.transform.localScale = new Vector3(0.18f, 0.18f, 0.5f);
+            ApplyMaterial(gunBody.GetComponent<Renderer>(),
+                new Color(0.18f, 0.18f, 0.2f), 0.6f, 0.6f);
+
+            GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Object.Destroy(barrel.GetComponent<Collider>());
+            barrel.transform.SetParent(gun.transform, false);
+            barrel.transform.localPosition = new Vector3(0f, 0f, 0.35f);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            barrel.transform.localScale = new Vector3(0.07f, 0.18f, 0.07f);
+            ApplyMaterial(barrel.GetComponent<Renderer>(),
+                new Color(0.1f, 0.1f, 0.12f), 0.6f, 0.6f);
+
+            // Muzzle anchor: the raycast origin and beam start.
+            GameObject muzzle = new GameObject("Muzzle");
+            muzzle.transform.SetParent(gun.transform, false);
+            muzzle.transform.localPosition = new Vector3(0f, 0f, 0.7f);
+
+            // Beam line renderer.
+            LineRenderer beam = muzzle.AddComponent<LineRenderer>();
+            beam.positionCount = 2;
+            beam.startWidth = 0.06f;
+            beam.endWidth = 0.02f;
+            beam.useWorldSpace = true;
+            beam.material = new Material(Shader.Find("Sprites/Default"));
+            beam.startColor = new Color(1f, 0.85f, 0.5f, 1f);
+            beam.endColor = new Color(1f, 0.6f, 0.3f, 0f);
+
+            // Muzzle flash light.
+            Light flash = muzzle.AddComponent<Light>();
+            flash.type = LightType.Point;
+            flash.range = 4f;
+            flash.color = new Color(1f, 0.85f, 0.5f);
+            flash.intensity = 4f;
+
+            PlayerController pc = p.AddComponent<PlayerController>();
+            PlayerFlashlight fl = p.AddComponent<PlayerFlashlight>();
             fl.flashlight = spot;
             p.AddComponent<PlayerStats>();
 
+            PlayerGun pg = p.AddComponent<PlayerGun>();
+            pg.muzzle = muzzle.transform;
+            pg.beam = beam;
+            pg.muzzleFlash = flash;
+
             player = p.transform;
         }
+
+        // -------- Exit portal --------
 
         void SpawnExit()
         {
@@ -256,16 +321,15 @@ namespace ZombieLand.Managers
             e.transform.SetParent(worldRoot);
             e.transform.position = exitSpawn;
 
-            // Visible disc.
             GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Object.Destroy(disc.GetComponent<Collider>());
             disc.transform.SetParent(e.transform, false);
             disc.transform.localPosition = Vector3.up * 0.05f;
             disc.transform.localScale = new Vector3(1.4f, 0.05f, 1.4f);
-            ApplyMaterial(disc.GetComponent<Renderer>(), new Color(1f, 0.95f, 0.7f), 0f, 0f,
+            ApplyMaterial(disc.GetComponent<Renderer>(),
+                new Color(1f, 0.95f, 0.7f), 0f, 0f,
                 emission: new Color(2.5f, 2.2f, 1.5f));
 
-            // Rising column light.
             GameObject lightGO = new GameObject("ExitGlow");
             lightGO.transform.SetParent(e.transform, false);
             lightGO.transform.localPosition = Vector3.up * 1.5f;
@@ -280,9 +344,11 @@ namespace ZombieLand.Managers
             trigger.size = new Vector3(1.4f, 2f, 1.4f);
             trigger.center = new Vector3(0f, 1f, 0f);
 
-            var portal = e.AddComponent<ExitPortal>();
+            ExitPortal portal = e.AddComponent<ExitPortal>();
             portal.glow = glow;
         }
+
+        // -------- Memory fragments --------
 
         void SpawnFragments()
         {
@@ -312,72 +378,167 @@ namespace ZombieLand.Managers
                 sc.isTrigger = true;
                 sc.radius = 0.7f;
 
-                var frag = orb.AddComponent<MemoryFragment>();
+                MemoryFragment frag = orb.AddComponent<MemoryFragment>();
                 frag.memoryText = (i < memories.Length)
                     ? memories[i]
                     : "A memory you cannot quite name...";
             }
 
-            // Tell the GameManager how many fragments we actually placed so the
-            // win condition matches the level data, not the inspector default.
             if (GameManager.Instance != null)
                 GameManager.Instance.totalFragments = fragmentSpawns.Count;
         }
 
+        // -------- Zombies --------
+
         void SpawnZombies()
         {
-            foreach (Vector3 pos in zombieSpawns)
-            {
-                GameObject z = new GameObject("Zombie");
-                z.transform.SetParent(worldRoot);
-                z.transform.position = pos + Vector3.up * 1f;
-
-                GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                Object.Destroy(body.GetComponent<Collider>());
-                body.transform.SetParent(z.transform, false);
-                body.transform.localScale = new Vector3(0.8f, 1f, 0.8f);
-                body.transform.localPosition = new Vector3(0f, 0f, 0f);
-                ApplyMaterial(body.GetComponent<Renderer>(),
-                    new Color(0.25f, 0.4f, 0.2f), 0.05f, 0.7f);
-
-                GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Object.Destroy(head.GetComponent<Collider>());
-                head.transform.SetParent(z.transform, false);
-                head.transform.localScale = Vector3.one * 0.55f;
-                head.transform.localPosition = new Vector3(0f, 1.1f, 0f);
-                ApplyMaterial(head.GetComponent<Renderer>(),
-                    new Color(0.55f, 0.6f, 0.4f), 0.05f, 0.6f);
-
-                // Glowing red eyes — pure cosmetic but adds atmosphere.
-                CreateEye(head.transform, new Vector3(0.18f, 0.05f, 0.42f));
-                CreateEye(head.transform, new Vector3(-0.18f, 0.05f, 0.42f));
-
-                CapsuleCollider trigger = z.AddComponent<CapsuleCollider>();
-                trigger.isTrigger = true;
-                trigger.height = 2f;
-                trigger.radius = 0.5f;
-                trigger.center = new Vector3(0f, 0.5f, 0f);
-
-                var rb = z.AddComponent<Rigidbody>();
-                rb.isKinematic = true;
-                rb.useGravity = false;
-
-                z.AddComponent<Zombie>();
-            }
+            foreach (var (pos, type) in zombieSpawns)
+                BuildZombie(pos, type);
         }
 
-        void CreateEye(Transform parent, Vector3 localPos)
+        void BuildZombie(Vector3 worldPos, ZombieType type)
+        {
+            GameObject z = new GameObject($"Zombie_{type}");
+            z.transform.SetParent(worldRoot);
+            z.transform.position = worldPos;
+
+            // Visual / physical dimensions per type.
+            float radius, height, bodyScaleY, bodyXZ, headScale, eyeScale;
+            Color bodyColor, headColor;
+            Color emission;
+            Color eyeColor;
+            float armScale;
+
+            switch (type)
+            {
+                case ZombieType.Walker:
+                    radius = 0.45f; height = 1.8f;
+                    bodyScaleY = 0.9f; bodyXZ = 0.85f;
+                    headScale = 0.55f; eyeScale = 0.10f;
+                    bodyColor  = new Color(0.30f, 0.42f, 0.22f);
+                    headColor  = new Color(0.50f, 0.55f, 0.35f);
+                    emission   = new Color(0.05f, 0.06f, 0.02f);
+                    eyeColor   = new Color(2.5f, 0.2f, 0.1f);
+                    armScale = 0.18f;
+                    break;
+                case ZombieType.Runner:
+                    radius = 0.35f; height = 1.8f;
+                    bodyScaleY = 0.9f; bodyXZ = 0.65f;
+                    headScale = 0.45f; eyeScale = 0.09f;
+                    bodyColor  = new Color(0.45f, 0.18f, 0.20f);
+                    headColor  = new Color(0.55f, 0.30f, 0.30f);
+                    emission   = new Color(0.18f, 0.02f, 0.02f);
+                    eyeColor   = new Color(3.5f, 0.25f, 0.15f);
+                    armScale = 0.14f;
+                    break;
+                case ZombieType.Brute:
+                default:
+                    radius = 0.6f; height = 2.3f;
+                    bodyScaleY = 1.1f; bodyXZ = 1.15f;
+                    headScale = 0.7f; eyeScale = 0.12f;
+                    bodyColor  = new Color(0.18f, 0.18f, 0.20f);
+                    headColor  = new Color(0.30f, 0.30f, 0.32f);
+                    emission   = new Color(0.04f, 0.04f, 0.05f);
+                    eyeColor   = new Color(2.5f, 1.8f, 0.4f);
+                    armScale = 0.26f;
+                    break;
+            }
+
+            CharacterController cc = z.AddComponent<CharacterController>();
+            cc.radius = radius;
+            cc.height = height;
+            cc.center = new Vector3(0f, height * 0.5f, 0f);
+            cc.slopeLimit = 60f;
+
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.Destroy(body.GetComponent<Collider>());
+            body.transform.SetParent(z.transform, false);
+            body.transform.localPosition = new Vector3(0f, height * 0.5f, 0f);
+            body.transform.localScale = new Vector3(bodyXZ, bodyScaleY, bodyXZ);
+            Renderer bodyRen = body.GetComponent<Renderer>();
+            ApplyMaterial(bodyRen, bodyColor, 0.05f, 0.5f, emission);
+
+            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Object.Destroy(head.GetComponent<Collider>());
+            head.transform.SetParent(z.transform, false);
+            head.transform.localPosition = new Vector3(0f, height + 0.05f, 0f);
+            head.transform.localScale = Vector3.one * headScale;
+            Renderer headRen = head.GetComponent<Renderer>();
+            ApplyMaterial(headRen, headColor, 0.05f, 0.55f, emission * 1.5f);
+
+            // Forward-extended arms (zombie pose).
+            (Renderer leftArm, Renderer rightArm) =
+                BuildArms(z.transform, type, height, armScale, bodyColor, emission);
+
+            // Two glowing eye spheres + a small point light.
+            (Renderer leftEye, Renderer rightEye, Light eyeLight) =
+                BuildEyes(head.transform, eyeScale, eyeColor);
+
+            Zombie zombie = z.AddComponent<Zombie>();
+            zombie.type = type;
+            zombie.ApplyTypeStats();
+            zombie.bodyRenderers = new[] { bodyRen, headRen, leftArm, rightArm, leftEye, rightEye };
+            zombie.eyeLights = new[] { eyeLight };
+        }
+
+        (Renderer, Renderer) BuildArms(Transform parent, ZombieType type,
+            float height, float thickness, Color color, Color emission)
+        {
+            float forward = type == ZombieType.Brute ? 0.0f : 0.45f;
+            float armLen = type == ZombieType.Brute ? 0.55f : 0.45f;
+            float yPos = type == ZombieType.Brute ? height * 0.55f : height * 0.65f;
+            float side = type == ZombieType.Runner ? 0.28f : 0.36f;
+
+            Renderer left = MakeArm(parent, new Vector3(-side, yPos, forward), armLen, thickness, color, emission);
+            Renderer right = MakeArm(parent, new Vector3( side, yPos, forward), armLen, thickness, color, emission);
+            return (left, right);
+        }
+
+        Renderer MakeArm(Transform parent, Vector3 localPos, float length,
+            float thickness, Color color, Color emission)
+        {
+            GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.Destroy(arm.GetComponent<Collider>());
+            arm.transform.SetParent(parent, false);
+            arm.transform.localPosition = localPos;
+            arm.transform.localRotation = Quaternion.Euler(80f, 0f, 0f);
+            arm.transform.localScale = new Vector3(thickness, length, thickness);
+            Renderer r = arm.GetComponent<Renderer>();
+            ApplyMaterial(r, color * 0.85f, 0.05f, 0.5f, emission);
+            return r;
+        }
+
+        (Renderer, Renderer, Light) BuildEyes(Transform headTransform, float eyeScale, Color emission)
+        {
+            Renderer leftEye = MakeEye(headTransform, new Vector3(-0.18f, 0.05f, 0.42f), eyeScale, emission);
+            Renderer rightEye = MakeEye(headTransform, new Vector3( 0.18f, 0.05f, 0.42f), eyeScale, emission);
+
+            GameObject lightGO = new GameObject("EyeLight");
+            lightGO.transform.SetParent(headTransform, false);
+            lightGO.transform.localPosition = new Vector3(0f, 0.05f, 0.5f);
+            Light l = lightGO.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.range = 2.5f;
+            l.color = new Color(emission.r / Mathf.Max(emission.r, 1f),
+                                emission.g / Mathf.Max(emission.r, 1f),
+                                emission.b / Mathf.Max(emission.r, 1f));
+            l.intensity = 1.2f;
+            return (leftEye, rightEye, l);
+        }
+
+        Renderer MakeEye(Transform parent, Vector3 localPos, float scale, Color emission)
         {
             GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             Object.Destroy(eye.GetComponent<Collider>());
             eye.transform.SetParent(parent, false);
-            eye.transform.localScale = Vector3.one * 0.18f;
+            eye.transform.localScale = Vector3.one * scale;
             eye.transform.localPosition = localPos;
-            ApplyMaterial(eye.GetComponent<Renderer>(), Color.red, 0f, 0f,
-                emission: new Color(2f, 0.1f, 0.1f));
+            Renderer r = eye.GetComponent<Renderer>();
+            ApplyMaterial(r, Color.black, 0f, 0f, emission);
+            return r;
         }
 
-        // -------- Camera & UI --------
+        // -------- Camera, GameManager, UI --------
 
         void EnsureGameManager()
         {
@@ -394,7 +555,7 @@ namespace ZombieLand.Managers
             cam.backgroundColor = new Color(0.02f, 0.02f, 0.04f);
             cam.fieldOfView = 55f;
             camGO.AddComponent<AudioListener>();
-            var follow = camGO.AddComponent<SmoothFollowCamera>();
+            SmoothFollowCamera follow = camGO.AddComponent<SmoothFollowCamera>();
             follow.target = player;
         }
 
@@ -402,21 +563,20 @@ namespace ZombieLand.Managers
         {
             GameObject uiGO = new GameObject("UI");
             uiGO.transform.SetParent(worldRoot);
-
             UIBuilder.Build(uiGO.transform, player);
         }
 
         // -------- Material helper --------
 
-        static Material sharedShader;
+        static Material sharedShaderProbe;
 
-        // Creates a per-renderer Standard-shader material because we have many
-        // colors. This is fine for a small project; for larger scenes one would
-        // batch into shared materials.
+        // Creates a per-renderer Standard-shader material. For a small
+        // project this is fine; for larger scenes one would batch into
+        // shared materials.
         static void ApplyMaterial(Renderer r, Color albedo, float metallic, float smoothness, Color? emission = null)
         {
-            if (sharedShader == null) sharedShader = new Material(Shader.Find("Standard"));
-            Material mat = new Material(sharedShader.shader);
+            if (sharedShaderProbe == null) sharedShaderProbe = new Material(Shader.Find("Standard"));
+            Material mat = new Material(sharedShaderProbe.shader);
             mat.color = albedo;
             mat.SetFloat("_Metallic", metallic);
             mat.SetFloat("_Glossiness", smoothness);

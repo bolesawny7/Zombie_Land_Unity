@@ -70,10 +70,23 @@ namespace ZombieLand.UI
                 = new Color(1, 1, 1, 0.6f);
 
             MakeText(hudPanel.transform, "Hint",
-                "WASD: Move    F: Flashlight    ESC: Pause",
+                "WASD: Move    F: Flashlight    LMB: Light Burst    ESC: Pause",
                 new Vector2(0, 30),
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
                 18, TextAnchor.MiddleCenter).color = new Color(1, 1, 1, 0.4f);
+
+            // Crosshair: a small dot in the centre of the screen.
+            GameObject crosshair = new GameObject("Crosshair",
+                typeof(RectTransform), typeof(Image));
+            crosshair.transform.SetParent(hudPanel.transform, false);
+            var crossImg = crosshair.GetComponent<Image>();
+            crossImg.color = new Color(1f, 0.9f, 0.7f, 0.6f);
+            var crossRT = crosshair.GetComponent<RectTransform>();
+            crossRT.anchorMin = new Vector2(0.5f, 0.5f);
+            crossRT.anchorMax = new Vector2(0.5f, 0.5f);
+            crossRT.pivot = new Vector2(0.5f, 0.5f);
+            crossRT.anchoredPosition = Vector2.zero;
+            crossRT.sizeDelta = new Vector2(8, 8);
 
             HUDController hud = canvasGO.AddComponent<HUDController>();
             hud.fragmentText = fragmentText;
