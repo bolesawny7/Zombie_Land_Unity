@@ -49,10 +49,10 @@ inverts that template.
 1. **Memory disturbance feedback** — the camera-shake-on-contact
    replaces traditional damage with a thematic, harmless tell.
 2. **Flashlight visibility trade-off** — light helps you and hurts you.
-3. **Light-Burst gun (non-lethal)** — the player gets a real combat
-   verb (stun) without breaking the no-death rule. The beam pins a
-   zombie in place and visibly tints it; the zombie is not destroyed
-   because in this fiction you cannot destroy a memory, only quiet it.
+3. **Sprint with stamina** — the player has a clean evasion verb
+   (Left Shift) but must manage a limited resource. Stamina regenerates
+   only while not sprinting, so the player has to commit to bursts
+   rather than sprinting indefinitely.
 4. **Three zombie variants from one script** — Walker, Runner, and
    Brute share `Zombie.cs`; the variant just tweaks speed, sight,
    colour, and silhouette parameters. Cheap to author, easy to extend.

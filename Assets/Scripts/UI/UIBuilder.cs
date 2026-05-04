@@ -37,63 +37,38 @@ namespace ZombieLand.UI
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), 30, TextAnchor.MiddleCenter);
             messageText.color = new Color(1f, 0.95f, 0.7f);
 
-            // Battery bar.
-            GameObject batteryRoot = new GameObject("BatteryRoot",
-                typeof(RectTransform), typeof(Image));
-            batteryRoot.transform.SetParent(hudPanel.transform, false);
-            var bbg = batteryRoot.GetComponent<Image>();
-            bbg.color = new Color(0, 0, 0, 0.5f);
-            var brt = batteryRoot.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0, 1);
-            brt.anchorMax = new Vector2(0, 1);
-            brt.pivot = new Vector2(0, 1);
-            brt.anchoredPosition = new Vector2(40, -90);
-            brt.sizeDelta = new Vector2(280, 22);
-
-            GameObject batteryFillGO = new GameObject("BatteryFill",
-                typeof(RectTransform), typeof(Image));
-            batteryFillGO.transform.SetParent(batteryRoot.transform, false);
-            var fillImg = batteryFillGO.GetComponent<Image>();
-            fillImg.color = new Color(1f, 0.85f, 0.5f);
-            fillImg.type = Image.Type.Filled;
-            fillImg.fillMethod = Image.FillMethod.Horizontal;
-            fillImg.fillAmount = 1f;
-            var ffrt = batteryFillGO.GetComponent<RectTransform>();
-            ffrt.anchorMin = Vector2.zero;
-            ffrt.anchorMax = Vector2.one;
-            ffrt.offsetMin = new Vector2(2, 2);
-            ffrt.offsetMax = new Vector2(-2, -2);
-
+            // Battery bar (flashlight).
+            Image batteryFill = MakeBar(hudPanel.transform, "Battery",
+                new Vector2(40, -90), new Color(1f, 0.85f, 0.5f));
             MakeText(hudPanel.transform, "BatteryLabel",
                 "Flashlight (F)", new Vector2(40, -120),
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
                 = new Color(1, 1, 1, 0.6f);
 
+            // Stamina bar (sprint).
+            Image staminaFill = MakeBar(hudPanel.transform, "Stamina",
+                new Vector2(40, -160), new Color(0.6f, 0.85f, 1f));
+            MakeText(hudPanel.transform, "StaminaLabel",
+                "Sprint (Shift)", new Vector2(40, -190),
+                new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
+                = new Color(1, 1, 1, 0.6f);
+
             MakeText(hudPanel.transform, "Hint",
-                "WASD: Move    F: Flashlight    LMB: Light Burst    ESC: Pause",
+                "WASD: Move    Shift: Sprint    F: Flashlight    ESC: Pause",
                 new Vector2(0, 30),
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
                 18, TextAnchor.MiddleCenter).color = new Color(1, 1, 1, 0.4f);
 
-            // Crosshair: a small dot in the centre of the screen.
-            GameObject crosshair = new GameObject("Crosshair",
-                typeof(RectTransform), typeof(Image));
-            crosshair.transform.SetParent(hudPanel.transform, false);
-            var crossImg = crosshair.GetComponent<Image>();
-            crossImg.color = new Color(1f, 0.9f, 0.7f, 0.6f);
-            var crossRT = crosshair.GetComponent<RectTransform>();
-            crossRT.anchorMin = new Vector2(0.5f, 0.5f);
-            crossRT.anchorMax = new Vector2(0.5f, 0.5f);
-            crossRT.pivot = new Vector2(0.5f, 0.5f);
-            crossRT.anchoredPosition = Vector2.zero;
-            crossRT.sizeDelta = new Vector2(8, 8);
-
             HUDController hud = canvasGO.AddComponent<HUDController>();
             hud.fragmentText = fragmentText;
             hud.messageText = messageText;
-            hud.batteryFill = fillImg;
+            hud.batteryFill = batteryFill;
+            hud.staminaFill = staminaFill;
             if (player != null)
-                hud.Bind(player.GetComponent<PlayerStats>(), player.GetComponent<PlayerFlashlight>());
+                hud.Bind(
+                    player.GetComponent<PlayerStats>(),
+                    player.GetComponent<PlayerFlashlight>(),
+                    player.GetComponent<PlayerController>());
 
             // ----- Main Menu -----
             GameObject mainMenu = MakePanel(canvas.transform, "MainMenu", new Color(0, 0, 0, 0.85f));
@@ -164,6 +139,38 @@ namespace ZombieLand.UI
             GameObject es = new GameObject("EventSystem");
             es.AddComponent<EventSystem>();
             es.AddComponent<StandaloneInputModule>();
+        }
+
+        // A horizontal bar with a black background and a coloured fill image
+        // anchored to the top-left of its parent.
+        static Image MakeBar(Transform parent, string name, Vector2 anchoredTopLeft, Color fillColor)
+        {
+            GameObject root = new GameObject(name + "Bar",
+                typeof(RectTransform), typeof(Image));
+            root.transform.SetParent(parent, false);
+            var bg = root.GetComponent<Image>();
+            bg.color = new Color(0, 0, 0, 0.5f);
+            var rt = root.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = anchoredTopLeft;
+            rt.sizeDelta = new Vector2(280, 22);
+
+            GameObject fillGO = new GameObject(name + "Fill",
+                typeof(RectTransform), typeof(Image));
+            fillGO.transform.SetParent(root.transform, false);
+            var fill = fillGO.GetComponent<Image>();
+            fill.color = fillColor;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillAmount = 1f;
+            var fr = fillGO.GetComponent<RectTransform>();
+            fr.anchorMin = Vector2.zero;
+            fr.anchorMax = Vector2.one;
+            fr.offsetMin = new Vector2(2, 2);
+            fr.offsetMax = new Vector2(-2, -2);
+            return fill;
         }
 
         static GameObject MakePanel(Transform parent, string name, Color bg)

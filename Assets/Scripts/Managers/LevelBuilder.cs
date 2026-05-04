@@ -249,60 +249,10 @@ namespace ZombieLand.Managers
             spot.color = new Color(1f, 0.92f, 0.75f);
             spot.shadows = LightShadows.Soft;
 
-            // ----- Gun -----
-
-            GameObject gun = new GameObject("Gun");
-            gun.transform.SetParent(p.transform, false);
-            gun.transform.localPosition = new Vector3(0.4f, 1.2f, 0.45f);
-
-            GameObject gunBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            Object.Destroy(gunBody.GetComponent<Collider>());
-            gunBody.transform.SetParent(gun.transform, false);
-            gunBody.transform.localPosition = new Vector3(0f, 0f, 0f);
-            gunBody.transform.localScale = new Vector3(0.18f, 0.18f, 0.5f);
-            ApplyMaterial(gunBody.GetComponent<Renderer>(),
-                new Color(0.18f, 0.18f, 0.2f), 0.6f, 0.6f);
-
-            GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Object.Destroy(barrel.GetComponent<Collider>());
-            barrel.transform.SetParent(gun.transform, false);
-            barrel.transform.localPosition = new Vector3(0f, 0f, 0.35f);
-            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            barrel.transform.localScale = new Vector3(0.07f, 0.18f, 0.07f);
-            ApplyMaterial(barrel.GetComponent<Renderer>(),
-                new Color(0.1f, 0.1f, 0.12f), 0.6f, 0.6f);
-
-            // Muzzle anchor: the raycast origin and beam start.
-            GameObject muzzle = new GameObject("Muzzle");
-            muzzle.transform.SetParent(gun.transform, false);
-            muzzle.transform.localPosition = new Vector3(0f, 0f, 0.7f);
-
-            // Beam line renderer.
-            LineRenderer beam = muzzle.AddComponent<LineRenderer>();
-            beam.positionCount = 2;
-            beam.startWidth = 0.06f;
-            beam.endWidth = 0.02f;
-            beam.useWorldSpace = true;
-            beam.material = new Material(Shader.Find("Sprites/Default"));
-            beam.startColor = new Color(1f, 0.85f, 0.5f, 1f);
-            beam.endColor = new Color(1f, 0.6f, 0.3f, 0f);
-
-            // Muzzle flash light.
-            Light flash = muzzle.AddComponent<Light>();
-            flash.type = LightType.Point;
-            flash.range = 4f;
-            flash.color = new Color(1f, 0.85f, 0.5f);
-            flash.intensity = 4f;
-
-            PlayerController pc = p.AddComponent<PlayerController>();
+            p.AddComponent<PlayerController>();
             PlayerFlashlight fl = p.AddComponent<PlayerFlashlight>();
             fl.flashlight = spot;
             p.AddComponent<PlayerStats>();
-
-            PlayerGun pg = p.AddComponent<PlayerGun>();
-            pg.muzzle = muzzle.transform;
-            pg.beam = beam;
-            pg.muzzleFlash = flash;
 
             player = p.transform;
         }
@@ -455,33 +405,24 @@ namespace ZombieLand.Managers
             body.transform.SetParent(z.transform, false);
             body.transform.localPosition = new Vector3(0f, height * 0.5f, 0f);
             body.transform.localScale = new Vector3(bodyXZ, bodyScaleY, bodyXZ);
-            Renderer bodyRen = body.GetComponent<Renderer>();
-            ApplyMaterial(bodyRen, bodyColor, 0.05f, 0.5f, emission);
+            ApplyMaterial(body.GetComponent<Renderer>(), bodyColor, 0.05f, 0.5f, emission);
 
             GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             Object.Destroy(head.GetComponent<Collider>());
             head.transform.SetParent(z.transform, false);
             head.transform.localPosition = new Vector3(0f, height + 0.05f, 0f);
             head.transform.localScale = Vector3.one * headScale;
-            Renderer headRen = head.GetComponent<Renderer>();
-            ApplyMaterial(headRen, headColor, 0.05f, 0.55f, emission * 1.5f);
+            ApplyMaterial(head.GetComponent<Renderer>(), headColor, 0.05f, 0.55f, emission * 1.5f);
 
-            // Forward-extended arms (zombie pose).
-            (Renderer leftArm, Renderer rightArm) =
-                BuildArms(z.transform, type, height, armScale, bodyColor, emission);
-
-            // Two glowing eye spheres + a small point light.
-            (Renderer leftEye, Renderer rightEye, Light eyeLight) =
-                BuildEyes(head.transform, eyeScale, eyeColor);
+            BuildArms(z.transform, type, height, armScale, bodyColor, emission);
+            BuildEyes(head.transform, eyeScale, eyeColor);
 
             Zombie zombie = z.AddComponent<Zombie>();
             zombie.type = type;
             zombie.ApplyTypeStats();
-            zombie.bodyRenderers = new[] { bodyRen, headRen, leftArm, rightArm, leftEye, rightEye };
-            zombie.eyeLights = new[] { eyeLight };
         }
 
-        (Renderer, Renderer) BuildArms(Transform parent, ZombieType type,
+        void BuildArms(Transform parent, ZombieType type,
             float height, float thickness, Color color, Color emission)
         {
             float forward = type == ZombieType.Brute ? 0.0f : 0.45f;
@@ -489,12 +430,11 @@ namespace ZombieLand.Managers
             float yPos = type == ZombieType.Brute ? height * 0.55f : height * 0.65f;
             float side = type == ZombieType.Runner ? 0.28f : 0.36f;
 
-            Renderer left = MakeArm(parent, new Vector3(-side, yPos, forward), armLen, thickness, color, emission);
-            Renderer right = MakeArm(parent, new Vector3( side, yPos, forward), armLen, thickness, color, emission);
-            return (left, right);
+            MakeArm(parent, new Vector3(-side, yPos, forward), armLen, thickness, color, emission);
+            MakeArm(parent, new Vector3( side, yPos, forward), armLen, thickness, color, emission);
         }
 
-        Renderer MakeArm(Transform parent, Vector3 localPos, float length,
+        void MakeArm(Transform parent, Vector3 localPos, float length,
             float thickness, Color color, Color emission)
         {
             GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -503,15 +443,13 @@ namespace ZombieLand.Managers
             arm.transform.localPosition = localPos;
             arm.transform.localRotation = Quaternion.Euler(80f, 0f, 0f);
             arm.transform.localScale = new Vector3(thickness, length, thickness);
-            Renderer r = arm.GetComponent<Renderer>();
-            ApplyMaterial(r, color * 0.85f, 0.05f, 0.5f, emission);
-            return r;
+            ApplyMaterial(arm.GetComponent<Renderer>(), color * 0.85f, 0.05f, 0.5f, emission);
         }
 
-        (Renderer, Renderer, Light) BuildEyes(Transform headTransform, float eyeScale, Color emission)
+        void BuildEyes(Transform headTransform, float eyeScale, Color emission)
         {
-            Renderer leftEye = MakeEye(headTransform, new Vector3(-0.18f, 0.05f, 0.42f), eyeScale, emission);
-            Renderer rightEye = MakeEye(headTransform, new Vector3( 0.18f, 0.05f, 0.42f), eyeScale, emission);
+            MakeEye(headTransform, new Vector3(-0.18f, 0.05f, 0.42f), eyeScale, emission);
+            MakeEye(headTransform, new Vector3( 0.18f, 0.05f, 0.42f), eyeScale, emission);
 
             GameObject lightGO = new GameObject("EyeLight");
             lightGO.transform.SetParent(headTransform, false);
@@ -519,23 +457,19 @@ namespace ZombieLand.Managers
             Light l = lightGO.AddComponent<Light>();
             l.type = LightType.Point;
             l.range = 2.5f;
-            l.color = new Color(emission.r / Mathf.Max(emission.r, 1f),
-                                emission.g / Mathf.Max(emission.r, 1f),
-                                emission.b / Mathf.Max(emission.r, 1f));
+            float maxChan = Mathf.Max(emission.r, emission.g, emission.b, 1f);
+            l.color = new Color(emission.r / maxChan, emission.g / maxChan, emission.b / maxChan);
             l.intensity = 1.2f;
-            return (leftEye, rightEye, l);
         }
 
-        Renderer MakeEye(Transform parent, Vector3 localPos, float scale, Color emission)
+        void MakeEye(Transform parent, Vector3 localPos, float scale, Color emission)
         {
             GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             Object.Destroy(eye.GetComponent<Collider>());
             eye.transform.SetParent(parent, false);
             eye.transform.localScale = Vector3.one * scale;
             eye.transform.localPosition = localPos;
-            Renderer r = eye.GetComponent<Renderer>();
-            ApplyMaterial(r, Color.black, 0f, 0f, emission);
-            return r;
+            ApplyMaterial(eye.GetComponent<Renderer>(), Color.black, 0f, 0f, emission);
         }
 
         // -------- Camera, GameManager, UI --------

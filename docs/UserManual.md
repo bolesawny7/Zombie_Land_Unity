@@ -28,10 +28,14 @@ The project is a regular Unity project. To open and play it:
 | Action     | Key            |
 |------------|----------------|
 | Move       | **WASD** / Arrow keys |
+| Sprint     | **Hold Left Shift** (drains stamina) |
 | Toggle flashlight | **F**   |
-| Fire Light-Burst gun | **Left Mouse Button** |
 | Pause / unpause   | **Esc** |
 | Confirm menu choice | **Mouse click** |
+
+The HUD shows two bars in the top-left: an **amber Flashlight Battery**
+bar and a **blue Sprint Stamina** bar. Sprinting drains stamina; the
+bar regenerates as soon as you release Shift or stop moving.
 
 ## Goal
 
@@ -63,17 +67,15 @@ longer phase through walls.
   camera shudders and the message *"...a memory flickers..."* appears.
   This is the only consequence of contact.
 
-## The Light-Burst Gun
+## Tips
 
-You carry a small "light-burst" gun fired with **Left Mouse Button**.
-
-- It does not kill — instead it **stuns** any zombie it hits for
-  ~3 seconds. Stunned zombies stop in place and tint blue.
-- A crosshair in the centre of the screen shows where you are aiming.
-- The beam is a hitscan raycast — there is no travel time, no
-  ammunition limit, only a short cooldown between shots.
-- Use it to peel runners off your back when you need a clean run to
-  the next memory fragment.
+- A **Runner** can outrun your normal walk speed; you'll need to
+  **sprint** to break line of sight, then duck behind a pillar and
+  let it lose interest before your stamina runs out.
+- The **Brute** is slow but turns sharply — never sprint *toward* a
+  brute at a corner; you'll burn stamina you may need to sprint *away*.
+- Memory fragments emit a soft blue point light — they're often
+  visible through fog before the orb itself becomes clear.
 
 ## Tips
 
