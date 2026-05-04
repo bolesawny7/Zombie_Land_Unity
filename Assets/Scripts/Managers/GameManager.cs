@@ -92,7 +92,9 @@ namespace ZombieLand.Managers
 
         public void LoseGame()
         {
-            if (CurrentState != State.Playing) return;
+            // Allow Lost to fire from Playing or Paused (rare, but defensive).
+            if (CurrentState == State.Won || CurrentState == State.Lost) return;
+            Debug.Log("[ZombieLand] GameManager.LoseGame() -> State.Lost");
             SetState(State.Lost);
             Time.timeScale = 0f;
         }

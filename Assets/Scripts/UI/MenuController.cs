@@ -55,6 +55,14 @@ namespace ZombieLand.UI
             if (lostPanel)      lostPanel.SetActive(state == GameManager.State.Lost);
             if (hudPanel)       hudPanel.SetActive(state == GameManager.State.Playing || state == GameManager.State.Paused);
 
+            // Make sure full-screen panels render on top of the HUD/flash
+            // overlay. SetAsLastSibling pushes them to the end of the
+            // canvas's children, which Unity UI draws last.
+            if (state == GameManager.State.Won && winPanel) winPanel.transform.SetAsLastSibling();
+            if (state == GameManager.State.Lost && lostPanel) lostPanel.transform.SetAsLastSibling();
+            if (state == GameManager.State.Paused && pauseMenuPanel) pauseMenuPanel.transform.SetAsLastSibling();
+            if (state == GameManager.State.Menu && mainMenuPanel) mainMenuPanel.transform.SetAsLastSibling();
+
             if (state == GameManager.State.Won) FillWinSummary();
         }
 

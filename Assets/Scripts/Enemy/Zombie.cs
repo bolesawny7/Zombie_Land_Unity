@@ -41,7 +41,9 @@ namespace ZombieLand.Enemy
         public float wanderRadius = 6f;
 
         [Header("Player contact")]
-        public float disturbDistance = 1.4f;
+        // Tightened: only fires when the zombie is actually pressed up
+        // against the player, not just nearby.
+        public float disturbDistance = 1.1f;
         public float disturbCooldown = 1.5f;
 
         public float gravity = -20f;
@@ -79,25 +81,29 @@ namespace ZombieLand.Enemy
 
         public void ApplyTypeStats()
         {
+            // Sight ranges are deliberately conservative: spawn-camp aggro
+            // (zombie chases you the moment you click "Begin") was the cause
+            // of the "Soul bar drains on its own" complaint -- a Runner with
+            // a 12-unit sight could close on you before you noticed it.
             switch (type)
             {
                 case ZombieType.Walker:
                     wanderSpeed = 1.4f;
                     chaseSpeed = 2.6f;
-                    sightRange = 9f;
-                    loseSightRange = 14f;
+                    sightRange = 6f;
+                    loseSightRange = 10f;
                     break;
                 case ZombieType.Runner:
                     wanderSpeed = 2.2f;
                     chaseSpeed = 5.2f;
-                    sightRange = 12f;
-                    loseSightRange = 18f;
+                    sightRange = 8f;
+                    loseSightRange = 12f;
                     break;
                 case ZombieType.Brute:
                     wanderSpeed = 1.0f;
                     chaseSpeed = 1.9f;
-                    sightRange = 7f;
-                    loseSightRange = 11f;
+                    sightRange = 5f;
+                    loseSightRange = 9f;
                     break;
             }
         }
@@ -161,7 +167,7 @@ namespace ZombieLand.Enemy
 
             float effectiveSight = sightRange;
             if (playerFlashlight != null && playerFlashlight.On)
-                effectiveSight *= 1.5f; // your light gives you away
+                effectiveSight += 2f; // your light gives you away (additive, not 1.5x)
 
             if (state == State.Wander && distance <= effectiveSight)
                 state = State.Chase;
@@ -276,9 +282,9 @@ namespace ZombieLand.Enemy
             {
                 lastDisturbTime = Time.time;
                 if (SmoothFollowCamera.Instance != null)
-                    SmoothFollowCamera.Instance.Shake(0.25f, 0.25f);
+                    SmoothFollowCamera.Instance.Shake(0.6f, 0.4f);
                 if (HUDController.Instance != null)
-                    HUDController.Instance.ShowMessage("...a memory flickers...", 1.2f);
+                    HUDController.Instance.ShowMessage("They touched you.", 0.9f);
                 if (playerStats != null)
                     playerStats.DisturbSoul(disturbSoulDamage);
             }

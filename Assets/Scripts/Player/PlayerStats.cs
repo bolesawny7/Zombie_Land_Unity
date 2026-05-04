@@ -4,13 +4,11 @@ using UnityEngine;
 namespace ZombieLand.Player
 {
     /// <summary>
-    /// Tracks the player's collected memory fragments AND the player's
-    /// "Soul Integrity" — a forgiving health stat that drops when a zombie
-    /// disturbs you and slowly regenerates over time.
-    ///
-    /// To preserve the project's "you are already a ghost, you cannot die"
-    /// theme, Soul Integrity is clamped at <see cref="minSoul"/> &gt; 0 —
-    /// it can be visibly drained and recovered, but it can't kill you.
+    /// Tracks the player's collected memory fragments, bomb inventory, and
+    /// "Soul Integrity" — the player's health. Each zombie disturbance chips
+    /// Soul down; staying out of contact lets it regenerate after a short
+    /// delay. When Soul reaches zero <see cref="Managers.GameManager.LoseGame"/>
+    /// is called and the Lost panel takes over.
     /// </summary>
     public class PlayerStats : MonoBehaviour
     {
@@ -33,6 +31,10 @@ namespace ZombieLand.Player
         public System.Action OnFragmentCollected;
         public System.Action OnSoulChanged;
         public System.Action OnBombCountChanged;
+        // Fired whenever the player takes damage (with the amount).
+        // Used by the damage-flash overlay so the player has a visceral
+        // "I just got hit" cue beyond the bar tick.
+        public System.Action<float> OnDamaged;
 
         float lastDisturbTime = -100f;
 
@@ -71,8 +73,12 @@ namespace ZombieLand.Player
             lastDisturbTime = Time.time;
             Soul = Mathf.Max(0f, Soul - amount);
             OnSoulChanged?.Invoke();
+            OnDamaged?.Invoke(amount);
             if (Soul <= 0f && Managers.GameManager.Instance != null)
+            {
+                Debug.Log("[ZombieLand] Player Soul depleted -> LoseGame()");
                 Managers.GameManager.Instance.LoseGame();
+            }
         }
 
         public void AddBomb(int amount = 1)

@@ -27,6 +27,11 @@ namespace ZombieLand.UI
             canvasGO.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
             canvasGO.AddComponent<GraphicRaycaster>();
 
+            // ----- Damage flash overlay (drawn first so other UI sits on top) -----
+            GameObject flashGO = MakePanel(canvas.transform, "DamageFlash", new Color(1f, 0.1f, 0.1f, 0f));
+            Image flashImage = flashGO.GetComponent<Image>();
+            flashImage.raycastTarget = false;
+
             // ----- HUD panel -----
             GameObject hudPanel = MakePanel(canvas.transform, "HUD", new Color(0, 0, 0, 0));
             Text fragmentText = MakeText(hudPanel.transform, "FragmentText",
@@ -86,6 +91,10 @@ namespace ZombieLand.UI
                     player.GetComponent<PlayerStats>(),
                     player.GetComponent<PlayerFlashlight>(),
                     player.GetComponent<PlayerController>());
+
+            DamageFlash damageFlash = canvasGO.AddComponent<DamageFlash>();
+            damageFlash.overlay = flashImage;
+            if (player != null) damageFlash.Bind(player.GetComponent<PlayerStats>());
 
             // ----- Main Menu -----
             GameObject mainMenu = MakePanel(canvas.transform, "MainMenu", new Color(0, 0, 0, 0.85f));
