@@ -42,30 +42,29 @@ namespace ZombieLand.UI
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), 30, TextAnchor.MiddleCenter);
             messageText.color = new Color(1f, 0.95f, 0.7f);
 
-            // Soul Integrity (health) bar — shown first because it's
-            // the most important at-a-glance status.
-            Image soulFill = MakeBar(hudPanel.transform, "Soul",
-                new Vector2(40, -90), new Color(1f, 0.4f, 0.45f));
+            // Soul Integrity (health) bar — largest and most prominent.
             MakeText(hudPanel.transform, "SoulLabel",
-                "Soul Integrity", new Vector2(40, -120),
-                new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
-                = new Color(1, 1, 1, 0.6f);
+                "HEALTH", new Vector2(40, -80),
+                new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 20, TextAnchor.UpperLeft).color
+                = new Color(1f, 0.6f, 0.6f);
+            Image soulFill = MakeBar(hudPanel.transform, "Soul",
+                new Vector2(40, -105), new Color(1f, 0.3f, 0.35f), 320, 28);
 
             // Battery bar (flashlight).
-            Image batteryFill = MakeBar(hudPanel.transform, "Battery",
-                new Vector2(40, -160), new Color(1f, 0.85f, 0.5f));
             MakeText(hudPanel.transform, "BatteryLabel",
-                "Flashlight (F)", new Vector2(40, -190),
+                "Flashlight (F)", new Vector2(40, -150),
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
                 = new Color(1, 1, 1, 0.6f);
+            Image batteryFill = MakeBar(hudPanel.transform, "Battery",
+                new Vector2(40, -175), new Color(1f, 0.85f, 0.5f));
 
             // Stamina bar (sprint).
-            Image staminaFill = MakeBar(hudPanel.transform, "Stamina",
-                new Vector2(40, -230), new Color(0.6f, 0.85f, 1f));
             MakeText(hudPanel.transform, "StaminaLabel",
-                "Sprint (Shift)", new Vector2(40, -260),
+                "Sprint (Shift)", new Vector2(40, -215),
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
                 = new Color(1, 1, 1, 0.6f);
+            Image staminaFill = MakeBar(hudPanel.transform, "Stamina",
+                new Vector2(40, -240), new Color(0.6f, 0.85f, 1f));
 
             // Bombs counter (top-right).
             Text bombText = MakeText(hudPanel.transform, "BombText",
@@ -74,10 +73,10 @@ namespace ZombieLand.UI
             bombText.color = new Color(1f, 0.7f, 0.55f);
 
             MakeText(hudPanel.transform, "Hint",
-                "WASD: Move    Shift: Sprint    F: Flashlight    Space: Bomb    ESC: Pause",
+                "WASD: Move    Shift: Sprint    F: Flashlight    Space: Bomb    Mouse: Look    ESC: Pause",
                 new Vector2(0, 30),
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
-                18, TextAnchor.MiddleCenter).color = new Color(1, 1, 1, 0.4f);
+                17, TextAnchor.MiddleCenter).color = new Color(1, 1, 1, 0.4f);
 
             HUDController hud = canvasGO.AddComponent<HUDController>();
             hud.fragmentText = fragmentText;
@@ -113,7 +112,8 @@ namespace ZombieLand.UI
                 20, TextAnchor.MiddleCenter).color = new Color(1, 1, 1, 0.7f);
 
             Button startBtn = MakeButton(mainMenu.transform, "StartButton", "Begin", new Vector2(0, -40));
-            Button quitMain = MakeButton(mainMenu.transform, "QuitButton", "Quit", new Vector2(0, -120));
+            Button instructionsBtn = MakeButton(mainMenu.transform, "InstructionsButton", "How to Play", new Vector2(0, -120));
+            Button quitMain = MakeButton(mainMenu.transform, "QuitButton", "Quit", new Vector2(0, -200));
 
             // ----- Pause Menu -----
             GameObject pauseMenu = MakePanel(canvas.transform, "PauseMenu", new Color(0, 0, 0, 0.7f));
@@ -140,6 +140,43 @@ namespace ZombieLand.UI
 
             Button restartFromWinBtn = MakeButton(winPanel.transform, "RestartButton", "Play Again", new Vector2(0, -180));
             Button quitFromWinBtn = MakeButton(winPanel.transform, "QuitButton", "Quit", new Vector2(0, -260));
+
+            // ----- Instructions Panel -----
+            GameObject instructionsPanel = MakePanel(canvas.transform, "InstructionsPanel", new Color(0, 0, 0, 0.92f));
+            MakeText(instructionsPanel.transform, "Title", "HOW TO PLAY",
+                new Vector2(0, 320),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                52, TextAnchor.MiddleCenter).color = new Color(1f, 0.85f, 0.6f);
+
+            string instructions =
+                "CONTROLS\n" +
+                "  WASD  -  Move\n" +
+                "  Shift  -  Sprint (uses stamina)\n" +
+                "  F  -  Toggle flashlight\n" +
+                "  Space  -  Detonate bomb\n" +
+                "  Mouse  -  Rotate camera\n" +
+                "  Esc  -  Pause\n\n" +
+                "GOAL\n" +
+                "  Collect all 5 Memory Fragments (blue orbs)\n" +
+                "  then walk into the golden Exit Light.\n\n" +
+                "TIPS\n" +
+                "  - Your HEALTH bar drops when zombies touch you.\n" +
+                "    If it hits zero, you die. Stay away!\n" +
+                "  - Bombs kill all zombies in a large radius.\n" +
+                "    Pick up red orbs to get bombs.\n" +
+                "  - Flashlight helps you see but zombies\n" +
+                "    can spot you from further away.\n" +
+                "  - Sprint lets you outrun any zombie,\n" +
+                "    but watch your stamina bar.";
+
+            Text instrText = MakeText(instructionsPanel.transform, "Body", instructions,
+                new Vector2(0, 0),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                22, TextAnchor.MiddleLeft);
+            instrText.rectTransform.sizeDelta = new Vector2(700, 500);
+            instrText.color = new Color(1, 1, 1, 0.85f);
+
+            Button backFromInstructions = MakeButton(instructionsPanel.transform, "BackButton", "Back", new Vector2(0, -320));
 
             // ----- Lost Panel -----
             GameObject lostPanel = MakePanel(canvas.transform, "LostPanel", new Color(0.05f, 0f, 0f, 0.92f));
@@ -172,6 +209,9 @@ namespace ZombieLand.UI
             mc.lostPanel = lostPanel;
             mc.retryFromLostButton = retryFromLostBtn;
             mc.quitFromLostButton = quitFromLostBtn;
+            mc.instructionsPanel = instructionsPanel;
+            mc.instructionsButton = instructionsBtn;
+            mc.backFromInstructionsButton = backFromInstructions;
         }
 
         // ----- helpers -----
@@ -191,7 +231,8 @@ namespace ZombieLand.UI
         // quad and ignores fillAmount entirely (that's why the bars used to
         // never visibly change). We assign a tiny runtime-created white sprite
         // so the Filled mode actually has something to clip.
-        static Image MakeBar(Transform parent, string name, Vector2 anchoredTopLeft, Color fillColor)
+        static Image MakeBar(Transform parent, string name, Vector2 anchoredTopLeft, Color fillColor,
+            float width = 280f, float height = 22f)
         {
             Sprite whiteSprite = GetWhiteSprite();
 
@@ -199,14 +240,14 @@ namespace ZombieLand.UI
                 typeof(RectTransform), typeof(Image));
             root.transform.SetParent(parent, false);
             var bg = root.GetComponent<Image>();
-            bg.color = new Color(0, 0, 0, 0.5f);
+            bg.color = new Color(0, 0, 0, 0.7f);
             bg.sprite = whiteSprite;
             var rt = root.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0, 1);
             rt.anchorMax = new Vector2(0, 1);
             rt.pivot = new Vector2(0, 1);
             rt.anchoredPosition = anchoredTopLeft;
-            rt.sizeDelta = new Vector2(280, 22);
+            rt.sizeDelta = new Vector2(width, height);
 
             GameObject fillGO = new GameObject(name + "Fill",
                 typeof(RectTransform), typeof(Image));

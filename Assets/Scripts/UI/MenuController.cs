@@ -27,6 +27,10 @@ namespace ZombieLand.UI
         public Button retryFromLostButton;
         public Button quitFromLostButton;
 
+        public GameObject instructionsPanel;
+        public Button instructionsButton;
+        public Button backFromInstructionsButton;
+
         public Text winSummaryText;
 
         void Start()
@@ -43,17 +47,20 @@ namespace ZombieLand.UI
             BindButton(quitFromWinButton, () => GameManager.Instance?.Quit());
             BindButton(retryFromLostButton, () => GameManager.Instance?.Restart());
             BindButton(quitFromLostButton, () => GameManager.Instance?.Quit());
+            BindButton(instructionsButton, ShowInstructions);
+            BindButton(backFromInstructionsButton, HideInstructions);
 
             OnStateChanged(GameManager.Instance != null ? GameManager.Instance.CurrentState : GameManager.State.Menu);
         }
 
         void OnStateChanged(GameManager.State state)
         {
-            if (mainMenuPanel)  mainMenuPanel.SetActive(state == GameManager.State.Menu);
-            if (pauseMenuPanel) pauseMenuPanel.SetActive(state == GameManager.State.Paused);
-            if (winPanel)       winPanel.SetActive(state == GameManager.State.Won);
-            if (lostPanel)      lostPanel.SetActive(state == GameManager.State.Lost);
-            if (hudPanel)       hudPanel.SetActive(state == GameManager.State.Playing || state == GameManager.State.Paused);
+            if (mainMenuPanel)       mainMenuPanel.SetActive(state == GameManager.State.Menu);
+            if (pauseMenuPanel)    pauseMenuPanel.SetActive(state == GameManager.State.Paused);
+            if (winPanel)          winPanel.SetActive(state == GameManager.State.Won);
+            if (lostPanel)         lostPanel.SetActive(state == GameManager.State.Lost);
+            if (instructionsPanel) instructionsPanel.SetActive(false);
+            if (hudPanel)          hudPanel.SetActive(state == GameManager.State.Playing || state == GameManager.State.Paused);
 
             // Make sure full-screen panels render on top of the HUD/flash
             // overlay. SetAsLastSibling pushes them to the end of the
@@ -76,6 +83,26 @@ namespace ZombieLand.UI
             foreach (string memory in GameManager.Instance.rememberedMemories)
                 sb.AppendLine("• " + memory);
             winSummaryText.text = sb.ToString();
+        }
+
+        void ShowInstructions()
+        {
+            if (mainMenuPanel) mainMenuPanel.SetActive(false);
+            if (instructionsPanel)
+            {
+                instructionsPanel.SetActive(true);
+                instructionsPanel.transform.SetAsLastSibling();
+            }
+        }
+
+        void HideInstructions()
+        {
+            if (instructionsPanel) instructionsPanel.SetActive(false);
+            if (mainMenuPanel)
+            {
+                mainMenuPanel.SetActive(true);
+                mainMenuPanel.transform.SetAsLastSibling();
+            }
         }
 
         static void BindButton(Button button, System.Action onClick)

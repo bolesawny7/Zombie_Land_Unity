@@ -51,6 +51,7 @@ namespace ZombieLand.Managers
             rememberedMemories.Clear();
             SetState(State.Playing);
             Time.timeScale = 1f;
+            LockCursor(true);
         }
 
         public void TogglePause()
@@ -59,11 +60,13 @@ namespace ZombieLand.Managers
             {
                 SetState(State.Paused);
                 Time.timeScale = 0f;
+                LockCursor(false);
             }
             else if (CurrentState == State.Paused)
             {
                 SetState(State.Playing);
                 Time.timeScale = 1f;
+                LockCursor(true);
             }
         }
 
@@ -88,15 +91,16 @@ namespace ZombieLand.Managers
         {
             SetState(State.Won);
             Time.timeScale = 0f;
+            LockCursor(false);
         }
 
         public void LoseGame()
         {
-            // Allow Lost to fire from Playing or Paused (rare, but defensive).
             if (CurrentState == State.Won || CurrentState == State.Lost) return;
             Debug.Log("[ZombieLand] GameManager.LoseGame() -> State.Lost");
             SetState(State.Lost);
             Time.timeScale = 0f;
+            LockCursor(false);
         }
 
         public void Restart()
@@ -118,6 +122,12 @@ namespace ZombieLand.Managers
         {
             CurrentState = next;
             OnStateChanged?.Invoke(next);
+        }
+
+        static void LockCursor(bool locked)
+        {
+            Cursor.lockState = locked ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = !locked;
         }
     }
 }
