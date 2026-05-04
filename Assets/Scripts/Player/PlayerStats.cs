@@ -14,18 +14,19 @@ namespace ZombieLand.Player
     /// </summary>
     public class PlayerStats : MonoBehaviour
     {
-        [Header("Memory fragments")]
-        public List<string> CollectedMemories { get; } = new List<string>();
-        public int FragmentsCollected { get; private set; }
-        public System.Action OnFragmentCollected;
-
+        // ----- Soul Integrity (visible in inspector) -----
         [Header("Soul Integrity")]
         public float maxSoul = 100f;
         public float minSoul = 5f;
         public float regenPerSecond = 6f;
         public float regenDelay = 1.5f;
 
+        // ----- Runtime state (Header attributes can't go on properties) -----
+        public List<string> CollectedMemories { get; } = new List<string>();
+        public int FragmentsCollected { get; private set; }
         public float Soul { get; private set; }
+
+        public System.Action OnFragmentCollected;
         public System.Action OnSoulChanged;
 
         float lastDisturbTime = -100f;
