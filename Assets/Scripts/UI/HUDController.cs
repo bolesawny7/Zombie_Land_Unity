@@ -16,6 +16,7 @@ namespace ZombieLand.UI
 
         public Text fragmentText;
         public Text messageText;
+        public Text bombText;
         public Image batteryFill;
         public Image staminaFill;
         public Image soulFill;
@@ -34,8 +35,13 @@ namespace ZombieLand.UI
             flashlight = playerFlashlight;
             controller = playerController;
 
-            if (stats != null) stats.OnFragmentCollected += RefreshFragmentCount;
+            if (stats != null)
+            {
+                stats.OnFragmentCollected += RefreshFragmentCount;
+                stats.OnBombCountChanged += RefreshBombCount;
+            }
             RefreshFragmentCount();
+            RefreshBombCount();
         }
 
         void Update()
@@ -71,6 +77,12 @@ namespace ZombieLand.UI
             if (fragmentText == null || GameManager.Instance == null) return;
             int collected = stats != null ? stats.FragmentsCollected : GameManager.Instance.collectedFragments;
             fragmentText.text = $"Memories: {collected} / {GameManager.Instance.totalFragments}";
+        }
+
+        public void RefreshBombCount()
+        {
+            if (bombText == null || stats == null) return;
+            bombText.text = $"Bombs: {stats.BombCount}";
         }
 
         public void ShowMessage(string message, float duration)

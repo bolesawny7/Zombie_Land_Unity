@@ -30,19 +30,23 @@ The project is a regular Unity project. To open and play it:
 | Move       | **WASD** / Arrow keys |
 | Sprint     | **Hold Left Shift** (drains stamina) |
 | Toggle flashlight | **F**   |
+| Detonate bomb     | **Space** |
 | Pause / unpause   | **Esc** |
 | Confirm menu choice | **Mouse click** |
 
 The HUD shows three bars in the top-left:
 
-1. **Pink Soul Integrity** bar — drops when a zombie disturbs you and
-   slowly regenerates after a short delay. By design it is clamped
-   above zero, so you cannot die — it gives visual feedback for
-   contact without breaking the project's no-death theme.
+1. **Pink Soul Integrity** bar — your health. Drops every time a
+   zombie touches you, and slowly regenerates after a short delay.
+   If it reaches zero, the screen fades to a *"The fog took you"*
+   panel and you can hit *Try Again* to restart the run.
 2. **Amber Flashlight Battery** bar — drains while the flashlight is on.
 3. **Blue Sprint Stamina** bar — drains while sprinting (turns lighter
    green-white at the moment you're actually sprinting), regenerates
    while not.
+
+The top-right shows your **bomb count** — the number of detonators
+you currently carry.
 
 ## Goal
 
@@ -70,9 +74,17 @@ longer phase through walls.
 
 - Carrying your flashlight on increases the distance at which they
   notice you (your light gives you away).
-- **They cannot hurt you.** When a zombie brushes through you, the
-  camera shudders and the message *"...a memory flickers..."* appears.
-  This is the only consequence of contact.
+- Each contact with a zombie chips away at your **Soul Integrity**
+  bar and shudders the camera. If it hits zero, you lose.
+
+## Bombs
+
+Two **bomb pickups** (small spinning red orbs with a fuse) are
+scattered through the maze. Walking into one adds it to your inventory
+(top-right counter). Press **Space** at any time to detonate one — a
+bright orange shockwave expands around you and **kills any zombie
+caught in the blast**, including Brutes. Use them on rooms full of
+zombies, or save one for the Runner that's been chasing you.
 
 ## Tips
 
@@ -83,6 +95,9 @@ longer phase through walls.
   brute at a corner; you'll burn stamina you may need to sprint *away*.
 - Memory fragments emit a soft blue point light — they're often
   visible through fog before the orb itself becomes clear.
+- A bomb on the ground in the middle of the map is the easiest one
+  to grab on the way back; pick it up early and you'll always have
+  a panic button.
 
 ## Tips
 

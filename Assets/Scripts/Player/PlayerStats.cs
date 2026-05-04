@@ -17,28 +17,35 @@ namespace ZombieLand.Player
         // ----- Soul Integrity (visible in inspector) -----
         [Header("Soul Integrity")]
         public float maxSoul = 100f;
-        public float minSoul = 5f;
         public float regenPerSecond = 6f;
         public float regenDelay = 1.5f;
+
+        [Header("Bombs")]
+        public int startingBombs = 0;
 
         // ----- Runtime state (Header attributes can't go on properties) -----
         public List<string> CollectedMemories { get; } = new List<string>();
         public int FragmentsCollected { get; private set; }
         public float Soul { get; private set; }
+        public int BombCount { get; private set; }
+        public bool IsDead => Soul <= 0f;
 
         public System.Action OnFragmentCollected;
         public System.Action OnSoulChanged;
+        public System.Action OnBombCountChanged;
 
         float lastDisturbTime = -100f;
 
         void Awake()
         {
             Soul = maxSoul;
+            BombCount = startingBombs;
         }
 
         void Update()
         {
             if (Time.timeScale == 0f) return;
+            if (IsDead) return;
 
             // Regenerate Soul, but only after a brief cooldown since the
             // last disturbance — gives the bar a "recover" feel.
@@ -60,10 +67,26 @@ namespace ZombieLand.Player
 
         public void DisturbSoul(float amount)
         {
+            if (IsDead) return;
             lastDisturbTime = Time.time;
-            // Floor at minSoul so the player never reaches zero / dies.
-            Soul = Mathf.Max(minSoul, Soul - amount);
+            Soul = Mathf.Max(0f, Soul - amount);
             OnSoulChanged?.Invoke();
+            if (Soul <= 0f && Managers.GameManager.Instance != null)
+                Managers.GameManager.Instance.LoseGame();
+        }
+
+        public void AddBomb(int amount = 1)
+        {
+            BombCount += amount;
+            OnBombCountChanged?.Invoke();
+        }
+
+        public bool TryConsumeBomb()
+        {
+            if (BombCount <= 0) return false;
+            BombCount--;
+            OnBombCountChanged?.Invoke();
+            return true;
         }
     }
 }

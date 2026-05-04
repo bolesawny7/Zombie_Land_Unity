@@ -9,6 +9,7 @@ namespace ZombieLand.Environment
     ///   'P' player spawn (one)
     ///   'E' exit portal  (one)
     ///   'F' memory fragment spawn
+    ///   'X' bomb pickup spawn
     ///   'Z' walker zombie spawn (slow shambler)
     ///   'R' runner zombie spawn (fast, lean, glowing red eyes)
     ///   'B' brute zombie spawn  (large, slow, heavy)
@@ -20,7 +21,7 @@ namespace ZombieLand.Environment
         public static readonly string[] Layout =
         {
             "#################",
-            "#P..............#",
+            "#P............X.#",
             "#...##.....##...#",
             "#...##..R..##...#",
             "#.......F.......#",
@@ -30,7 +31,7 @@ namespace ZombieLand.Environment
             "#...##.....##...#",
             "#......R........#",
             "#...##.....##...#",
-            "#...##..F..##...#",
+            "#.X.##..F..##...#",
             "#...##.....##...#",
             "#.....B.....F...#",
             "#...............#",

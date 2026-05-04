@@ -10,7 +10,7 @@ namespace ZombieLand.Managers
     /// </summary>
     public class GameManager : MonoBehaviour
     {
-        public enum State { Menu, Playing, Paused, Won }
+        public enum State { Menu, Playing, Paused, Won, Lost }
 
         public static GameManager Instance { get; private set; }
 
@@ -87,6 +87,13 @@ namespace ZombieLand.Managers
         public void WinGame()
         {
             SetState(State.Won);
+            Time.timeScale = 0f;
+        }
+
+        public void LoseGame()
+        {
+            if (CurrentState != State.Playing) return;
+            SetState(State.Lost);
             Time.timeScale = 0f;
         }
 

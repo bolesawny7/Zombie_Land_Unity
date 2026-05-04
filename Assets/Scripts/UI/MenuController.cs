@@ -14,6 +14,7 @@ namespace ZombieLand.UI
         public GameObject mainMenuPanel;
         public GameObject pauseMenuPanel;
         public GameObject winPanel;
+        public GameObject lostPanel;
         public GameObject hudPanel;
 
         public Button startButton;
@@ -23,6 +24,8 @@ namespace ZombieLand.UI
         public Button quitFromPauseButton;
         public Button restartFromWinButton;
         public Button quitFromWinButton;
+        public Button retryFromLostButton;
+        public Button quitFromLostButton;
 
         public Text winSummaryText;
 
@@ -38,6 +41,8 @@ namespace ZombieLand.UI
             BindButton(quitFromMainButton, () => GameManager.Instance?.Quit());
             BindButton(quitFromPauseButton, () => GameManager.Instance?.Quit());
             BindButton(quitFromWinButton, () => GameManager.Instance?.Quit());
+            BindButton(retryFromLostButton, () => GameManager.Instance?.Restart());
+            BindButton(quitFromLostButton, () => GameManager.Instance?.Quit());
 
             OnStateChanged(GameManager.Instance != null ? GameManager.Instance.CurrentState : GameManager.State.Menu);
         }
@@ -47,6 +52,7 @@ namespace ZombieLand.UI
             if (mainMenuPanel)  mainMenuPanel.SetActive(state == GameManager.State.Menu);
             if (pauseMenuPanel) pauseMenuPanel.SetActive(state == GameManager.State.Paused);
             if (winPanel)       winPanel.SetActive(state == GameManager.State.Won);
+            if (lostPanel)      lostPanel.SetActive(state == GameManager.State.Lost);
             if (hudPanel)       hudPanel.SetActive(state == GameManager.State.Playing || state == GameManager.State.Paused);
 
             if (state == GameManager.State.Won) FillWinSummary();

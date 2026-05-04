@@ -62,8 +62,14 @@ namespace ZombieLand.UI
                 new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1), 18, TextAnchor.UpperLeft).color
                 = new Color(1, 1, 1, 0.6f);
 
+            // Bombs counter (top-right).
+            Text bombText = MakeText(hudPanel.transform, "BombText",
+                "Bombs: 0", new Vector2(-40, -40),
+                new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1), 28, TextAnchor.UpperRight);
+            bombText.color = new Color(1f, 0.7f, 0.55f);
+
             MakeText(hudPanel.transform, "Hint",
-                "WASD: Move    Shift: Sprint    F: Flashlight    ESC: Pause",
+                "WASD: Move    Shift: Sprint    F: Flashlight    Space: Bomb    ESC: Pause",
                 new Vector2(0, 30),
                 new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
                 18, TextAnchor.MiddleCenter).color = new Color(1, 1, 1, 0.4f);
@@ -71,6 +77,7 @@ namespace ZombieLand.UI
             HUDController hud = canvasGO.AddComponent<HUDController>();
             hud.fragmentText = fragmentText;
             hud.messageText = messageText;
+            hud.bombText = bombText;
             hud.batteryFill = batteryFill;
             hud.staminaFill = staminaFill;
             hud.soulFill = soulFill;
@@ -125,6 +132,20 @@ namespace ZombieLand.UI
             Button restartFromWinBtn = MakeButton(winPanel.transform, "RestartButton", "Play Again", new Vector2(0, -180));
             Button quitFromWinBtn = MakeButton(winPanel.transform, "QuitButton", "Quit", new Vector2(0, -260));
 
+            // ----- Lost Panel -----
+            GameObject lostPanel = MakePanel(canvas.transform, "LostPanel", new Color(0.05f, 0f, 0f, 0.92f));
+            MakeText(lostPanel.transform, "Title", "The fog took you.",
+                new Vector2(0, 220),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                64, TextAnchor.MiddleCenter).color = new Color(1f, 0.4f, 0.4f);
+            MakeText(lostPanel.transform, "Sub",
+                "Your Soul Integrity reached zero. The memories scatter again.",
+                new Vector2(0, 100),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                24, TextAnchor.MiddleCenter).color = new Color(1, 1, 1, 0.7f);
+            Button retryFromLostBtn = MakeButton(lostPanel.transform, "RetryButton", "Try Again", new Vector2(0, -40));
+            Button quitFromLostBtn = MakeButton(lostPanel.transform, "QuitButton", "Quit", new Vector2(0, -120));
+
             // ----- Hook them all up -----
             MenuController mc = canvasGO.AddComponent<MenuController>();
             mc.mainMenuPanel = mainMenu;
@@ -139,6 +160,9 @@ namespace ZombieLand.UI
             mc.restartFromWinButton = restartFromWinBtn;
             mc.quitFromWinButton = quitFromWinBtn;
             mc.winSummaryText = summary;
+            mc.lostPanel = lostPanel;
+            mc.retryFromLostButton = retryFromLostBtn;
+            mc.quitFromLostButton = quitFromLostBtn;
         }
 
         // ----- helpers -----
@@ -153,13 +177,21 @@ namespace ZombieLand.UI
 
         // A horizontal bar with a black background and a coloured fill image
         // anchored to the top-left of its parent.
+        //
+        // IMPORTANT: An Image with type=Filled but no Sprite renders as a full
+        // quad and ignores fillAmount entirely (that's why the bars used to
+        // never visibly change). We assign a tiny runtime-created white sprite
+        // so the Filled mode actually has something to clip.
         static Image MakeBar(Transform parent, string name, Vector2 anchoredTopLeft, Color fillColor)
         {
+            Sprite whiteSprite = GetWhiteSprite();
+
             GameObject root = new GameObject(name + "Bar",
                 typeof(RectTransform), typeof(Image));
             root.transform.SetParent(parent, false);
             var bg = root.GetComponent<Image>();
             bg.color = new Color(0, 0, 0, 0.5f);
+            bg.sprite = whiteSprite;
             var rt = root.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0, 1);
             rt.anchorMax = new Vector2(0, 1);
@@ -171,6 +203,7 @@ namespace ZombieLand.UI
                 typeof(RectTransform), typeof(Image));
             fillGO.transform.SetParent(root.transform, false);
             var fill = fillGO.GetComponent<Image>();
+            fill.sprite = whiteSprite;
             fill.color = fillColor;
             fill.type = Image.Type.Filled;
             fill.fillMethod = Image.FillMethod.Horizontal;
@@ -181,6 +214,18 @@ namespace ZombieLand.UI
             fr.offsetMin = new Vector2(2, 2);
             fr.offsetMax = new Vector2(-2, -2);
             return fill;
+        }
+
+        static Sprite cachedWhiteSprite;
+
+        static Sprite GetWhiteSprite()
+        {
+            if (cachedWhiteSprite != null) return cachedWhiteSprite;
+            cachedWhiteSprite = Sprite.Create(
+                Texture2D.whiteTexture,
+                new Rect(0, 0, Texture2D.whiteTexture.width, Texture2D.whiteTexture.height),
+                new Vector2(0.5f, 0.5f));
+            return cachedWhiteSprite;
         }
 
         static GameObject MakePanel(Transform parent, string name, Color bg)

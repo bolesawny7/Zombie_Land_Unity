@@ -30,18 +30,24 @@ namespace ZombieLand.Player
 
         CharacterController controller;
         Camera mainCamera;
+        PlayerStats stats;
         Vector3 verticalVelocity;
         bool sprintLocked;
 
         void Awake()
         {
             controller = GetComponent<CharacterController>();
+            stats = GetComponent<PlayerStats>();
             Stamina = maxStamina;
         }
 
         void Update()
         {
             if (Time.timeScale == 0f) return;
+            // Once the player is dead the GameManager has frozen time; this is
+            // a belt-and-braces guard for the rare frame where time is still
+            // ticking but Soul has just hit zero.
+            if (stats != null && stats.IsDead) return;
 
             // Camera is built after the player by LevelBuilder, so we
             // resolve it lazily and cache the first non-null result.

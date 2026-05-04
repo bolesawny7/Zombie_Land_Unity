@@ -2,17 +2,18 @@
 
 ## What makes this project different
 
-Most student "zombie" games are survival shooters: zombies chase you,
-they damage you, you die. *Zombie Land — Echoes of Memory* deliberately
-inverts that template.
+Most student "zombie" games are survival shooters with one verb:
+shoot. *Zombie Land — Echoes of Memory* keeps the haunting "ghost in
+a forgotten place" framing but pairs it with two contrasting verbs —
+a passive **sprint** for evasion, and an active **bomb** for
+catharsis — so traversal is always a meaningful decision.
 
-- **The zombies cannot hurt you.** They are not enemies — they are
-  *echoes of your own forgotten self*. When one passes through you the
-  game shakes the camera and prints "*...a memory flickers...*" and
-  that is the entire mechanical consequence of contact. This was a
-  conscious design choice to align with the assignment's **"Memory"**
-  theme: the player is not fighting a threat, they are reconstructing
-  themselves. The danger is symbolic, not numeric.
+- **A "Soul Integrity" health bar instead of generic HP.** Each
+  contact with a zombie chips it down; staying away regenerates it.
+  When it hits zero you don't get a "Game Over" — you see a
+  *"The fog took you"* panel and a *Try Again* button. The framing
+  stays in the project's memory theme even when the mechanics are
+  classic survival.
 
 - **The flashlight is a double-edged tool.** It pushes back the fog
   and lets you see further, but it also extends the radius at which
@@ -46,27 +47,35 @@ inverts that template.
 
 ## Creative mechanics introduced
 
-1. **Memory disturbance feedback** — the camera-shake-on-contact
-   replaces traditional damage with a thematic, harmless tell.
+1. **Soul-integrity health & death loop** — a regenerating health bar
+   keeps small bumps cheap but makes a sustained chase fatal.
 2. **Flashlight visibility trade-off** — light helps you and hurts you.
 3. **Sprint with stamina** — the player has a clean evasion verb
    (Left Shift) but must manage a limited resource. Stamina regenerates
    only while not sprinting, so the player has to commit to bursts
    rather than sprinting indefinitely.
-4. **Three zombie variants from one script** — Walker, Runner, and
+4. **Bomb pickup powerup** — collectible orbs in the maze grant a
+   single Space-bar shockwave that kills any zombie in radius. Killed
+   zombies play a procedural collapse-and-shrink death animation.
+5. **Three zombie variants from one script** — Walker, Runner, and
    Brute share `Zombie.cs`; the variant just tweaks speed, sight,
    colour, and silhouette parameters. Cheap to author, easy to extend.
-5. **Inline narrative through pickups** — each fragment carries a
+6. **Procedural locomotion animation, no rigging required** —
+   `ZombieAnimator` and `PlayerAnimator` synthesise body sway, head
+   bob, arm swing, and a sprint forward-lean from the world-space
+   movement of the parent transform. The whole game animates without
+   any imported FBX rigs or Animator Controllers.
+7. **Inline narrative through pickups** — each fragment carries a
    single line of poetic text shown both as a transient HUD message
    and assembled into the win-screen "Remembered" log.
-6. **Procedural-from-code world** — the whole project is a single
+8. **Procedural-from-code world** — the whole project is a single
    pressable button in any clean scene; nothing is hand-baked.
 
 ## What I'd do next
 
 - A simple ambient audio bed and a soft "ping" when a fragment is
-  collected.
-- Animator-driven shambling for the zombies (the script already feeds
-  a `Speed` parameter into any Animator child it finds).
+  collected; a heavy whoomph for the bomb.
 - A second level with a different maze layout — only `MazeData.cs`
   needs to change.
+- A throwable variant of the bomb (right-click to launch instead of
+  detonating in-place).

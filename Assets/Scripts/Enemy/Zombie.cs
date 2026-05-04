@@ -64,6 +64,10 @@ namespace ZombieLand.Enemy
         float lastDisturbTime = -10f;
         Vector3 verticalVel;
 
+        bool isDying;
+        float deathStart;
+        const float DeathDuration = 1.0f;
+
         enum State { Wander, Chase }
         State state = State.Wander;
 
@@ -114,6 +118,12 @@ namespace ZombieLand.Enemy
 
         void Update()
         {
+            if (isDying)
+            {
+                UpdateDeath();
+                return;
+            }
+
             if (player == null) return;
 
             UpdateState();
@@ -121,6 +131,26 @@ namespace ZombieLand.Enemy
             Vector3 dir = StepAlongPath();
             ApplyMovement(dir);
             CheckMemoryDisturbance();
+        }
+
+        // ----- Death (called by Explosion) -----
+
+        public void Die()
+        {
+            if (isDying) return;
+            isDying = true;
+            deathStart = Time.time;
+            // Stop blocking the player physically the instant we die.
+            if (cc != null) cc.enabled = false;
+        }
+
+        void UpdateDeath()
+        {
+            float t = Mathf.Clamp01((Time.time - deathStart) / DeathDuration);
+            // Collapse straight down and shrink.
+            transform.localScale = Vector3.one * Mathf.Lerp(1f, 0f, t);
+            transform.position += Vector3.down * 0.5f * Time.deltaTime;
+            if (t >= 1f) Destroy(gameObject);
         }
 
         // ----- State machine -----
